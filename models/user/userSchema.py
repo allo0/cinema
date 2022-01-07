@@ -9,8 +9,12 @@ class UserBase(BaseModel):
     surname: Optional[str] = None
 
 
-
 class UserCreate(UserBase):
+    password: str
+
+
+class UserLogin(BaseModel):
+    username: str
     password: str
 
 
