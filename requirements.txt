@@ -10,3 +10,4 @@ SQLAlchemy~=1.4.29
 DateTime~=4.3
 mysql~=0.0.3
 mysql-connector-python~=8.0.27
+passlib~=1.7.4
