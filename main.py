@@ -1,28 +1,36 @@
-from datetime import timedelta, datetime
-
-from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.security import OAuth2PasswordBearer
+from fastapi_jwt_auth import AuthJWT
+from fastapi_jwt_auth.exceptions import AuthJWTException
 from sqlalchemy.orm import Session
-from typing import List, Optional
-from base.db import SessionLocal
+
+import models.token
 from base.config import settings
-from models.token import TokenData
+from base.db import SessionLocal
+from models.token import redis_conn
 from models.user import userSchema, userOperation
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import JWTError, jwt
-from passlib.context import CryptContext
+from models.user.userSchema import UserLogin
 
-from models.user.userOperation import authenticate_user
-from models.user.userSchema import User
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 app = FastAPI(title=settings.PROJECT_NAME, version=settings.PROJECT_VERSION)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+origins = [
+    "https://cinema-thingy-1124.herokuapp.com",
+    "http://127.0.0.1:5000",
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+tokenSettings = models.token.Settings()
 # to get a string like this run:
 # openssl rand -hex 32
 SECRET_KEY = "3d781d186bbeaaec8405d529c23a18a7d9c53e3bf94b1c3ea259df93e42fbcfe"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 
 @app.middleware("http")
@@ -36,6 +44,16 @@ async def db_session_middleware(request: Request, call_next):
     return response
 
 
+# exception handler for authjwt
+# in production, you can tweak performance using orjson response
+@app.exception_handler(AuthJWTException)
+def authjwt_exception_handler(request: Request, exc: AuthJWTException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.message}
+    )
+
+
 # Connect with the database
 def get_db():
     db = SessionLocal()
@@ -45,59 +63,6 @@ def get_db():
         db.close()
 
 
-async def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            raise credentials_exception
-        token_data = TokenData(username=username)
-    except JWTError:
-        raise credentials_exception
-    user = userOperation.get_user(db, username=token_data.username)
-    if user is None:
-        raise credentials_exception
-    return user
-
-
-async def get_current_active_user(current_user: User = Depends(get_current_user)):
-    if current_user.is_active == False:
-        raise HTTPException(status_code=400, detail="User not authenticated")
-    return current_user
-
-
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
-
-
-@app.post("/v1/token")
-async def login_for_access_token(db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()):
-    user = authenticate_user(db, form_data.username, form_data.password)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
-    )
-    return {"access_token": access_token, "token_type": "Bearer"}
-
-
 @app.post("/v1/register/", response_model=userSchema.User)
 def create_user(user: userSchema.UserCreate, db: Session = Depends(get_db)):
     db_user = userOperation.check_if_user_exists(db, email=user.email, username=user.username)
@@ -105,14 +70,71 @@ def create_user(user: userSchema.UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="User already registered")
     return userOperation.create_user(db=db, user_=user)
 
+# provide a method to create access tokens. The create_access_token()
+# function is used to actually generate the token to use authorization
+# later in endpoint protected
+@app.post('/v1/login')
+def login(user: UserLogin, db: Session = Depends(get_db), Authorize: AuthJWT = Depends()):
+    # user = userOperation.get_user(db, username=token_data.username)
+    user = userOperation.authenticate_user(db, user.username, user.password)
 
-@app.get("/v1/users/", response_model=List[userSchema.User])
-def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    users = userOperation.get_users(db, skip=skip, limit=limit)
-    return users
+    if not user:
+        raise HTTPException(status_code=401, detail="Wrong username or password")
+    """
+    create_access_token supports an optional 'fresh' argument,
+    which marks the token as fresh or non-fresh accordingly.
+    As we just verified their username and password, we are
+    going to mark the token as fresh here.
+    """
+    access_token = Authorize.create_access_token(subject=user.username, fresh=True)
+    refresh_token = Authorize.create_refresh_token(subject=user.username)
+    return {"access_type": "Bearer", "access_token": access_token, "refresh_token": refresh_token}
 
+@app.post('/v1/refresh')
+def refresh(Authorize: AuthJWT = Depends()):
+    """
+    The jwt_refresh_token_required() function insures a valid refresh
+    token is present in the request before running any code below that function.
+    we can use the get_jwt_subject() function to get the subject of the refresh
+    token, and use the create_access_token() function again to make a new access token
+    """
+    Authorize.jwt_refresh_token_required()
 
+    current_user = Authorize.get_jwt_subject()
+    new_access_token = Authorize.create_access_token(subject=current_user)
+    return {"access_token": new_access_token}
 
-@app.get("/v1/users/me/", response_model=userSchema.User)
-async def read_users_me(current_user: userSchema.User = Depends(get_current_user)):
-    return current_user
+# Endpoint for revoking the current users access token
+#  Basically Logout function
+@app.delete('/v1/access-revoke')
+def access_revoke(Authorize: AuthJWT = Depends()):
+    Authorize.jwt_required()
+
+    jti = Authorize.get_raw_jwt()['jti']
+    redis_conn.setex(jti, tokenSettings.access_expires, 'true')
+    return {"status": "200", "message": "Access token has been revoke, logged out"}
+
+# Endpoint for revoking the current users refresh token
+@app.delete('/v1/refresh-revoke')
+def refresh_revoke(Authorize: AuthJWT = Depends()):
+    Authorize.jwt_refresh_token_required()
+
+    jti = Authorize.get_raw_jwt()['jti']
+    redis_conn.setex(jti, tokenSettings.refresh_expires, 'true')
+    return {"detail": "Refresh token has been revoke"}
+
+# Any valid JWT access token can access this endpoint
+@app.get('/v1/protected')
+def protected(Authorize: AuthJWT = Depends()):
+    Authorize.jwt_required()
+
+    current_user = Authorize.get_jwt_subject()
+    return {"user": current_user}
+
+# Only fresh JWT access token can access this endpoint
+@app.get('/v1/protected-fresh')
+def protected_fresh(Authorize: AuthJWT = Depends()):
+    Authorize.fresh_jwt_required()
+
+    current_user = Authorize.get_jwt_subject()
+    return {"user": current_user}
