@@ -1,7 +1,6 @@
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.security import OAuth2PasswordBearer
 from fastapi_jwt_auth import AuthJWT
 from fastapi_jwt_auth.exceptions import AuthJWTException
 from sqlalchemy.orm import Session
@@ -14,11 +13,11 @@ from models.user import userSchema, userOperation
 from models.user.userSchema import UserLogin
 
 app = FastAPI(title=settings.PROJECT_NAME, version=settings.PROJECT_VERSION)
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 origins = [
     "https://cinema-thingy-1124.herokuapp.com",
     "http://127.0.0.1:5000",
+    "http://localhost:4200",
 ]
 app.add_middleware(
     CORSMiddleware,
@@ -28,9 +27,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 tokenSettings = models.token.Settings()
-# to get a string like this run:
-# openssl rand -hex 32
-SECRET_KEY = "3d781d186bbeaaec8405d529c23a18a7d9c53e3bf94b1c3ea259df93e42fbcfe"
 
 
 @app.middleware("http")
@@ -70,6 +66,7 @@ def create_user(user: userSchema.UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="User already registered")
     return userOperation.create_user(db=db, user_=user)
 
+
 # provide a method to create access tokens. The create_access_token()
 # function is used to actually generate the token to use authorization
 # later in endpoint protected
@@ -90,6 +87,7 @@ def login(user: UserLogin, db: Session = Depends(get_db), Authorize: AuthJWT = D
     refresh_token = Authorize.create_refresh_token(subject=user.username)
     return {"access_type": "Bearer", "access_token": access_token, "refresh_token": refresh_token}
 
+
 @app.post('/v1/refresh')
 def refresh(Authorize: AuthJWT = Depends()):
     """
@@ -104,8 +102,8 @@ def refresh(Authorize: AuthJWT = Depends()):
     new_access_token = Authorize.create_access_token(subject=current_user)
     return {"access_token": new_access_token}
 
-# Endpoint for revoking the current users access token
-#  Basically Logout function
+
+# Basically Logout function
 @app.delete('/v1/access-revoke')
 def access_revoke(Authorize: AuthJWT = Depends()):
     Authorize.jwt_required()
@@ -113,6 +111,7 @@ def access_revoke(Authorize: AuthJWT = Depends()):
     jti = Authorize.get_raw_jwt()['jti']
     redis_conn.setex(jti, tokenSettings.access_expires, 'true')
     return {"status": "200", "message": "Access token has been revoke, logged out"}
+
 
 # Endpoint for revoking the current users refresh token
 @app.delete('/v1/refresh-revoke')
@@ -123,13 +122,16 @@ def refresh_revoke(Authorize: AuthJWT = Depends()):
     redis_conn.setex(jti, tokenSettings.refresh_expires, 'true')
     return {"detail": "Refresh token has been revoke"}
 
+
 # Any valid JWT access token can access this endpoint
 @app.get('/v1/protected')
-def protected(Authorize: AuthJWT = Depends()):
+def protected(Authorize: AuthJWT = Depends(), db: Session = Depends(get_db)):
     Authorize.jwt_required()
 
     current_user = Authorize.get_jwt_subject()
-    return {"user": current_user}
+    userDetails = userOperation.get_user(db, current_user)
+    return {"details": userDetails}
+
 
 # Only fresh JWT access token can access this endpoint
 @app.get('/v1/protected-fresh')
