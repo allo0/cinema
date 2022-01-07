@@ -1,4 +1,6 @@
 import os
+
+import redis
 from fastapi_jwt_auth import AuthJWT
 from pydantic import BaseModel
 from redis import Redis
@@ -25,8 +27,8 @@ def get_config():
 
 
 url = urlparse(os.environ.get("REDIS_URL"))
-redis_conn = Redis(host=url.hostname, port=url.port, username=url.username, password=url.password, ssl=True, ssl_cert_reqs=None)
-
+# redis_conn = Redis(host=url.hostname, port=url.port, username=url.username, password=url.password, ssl=True, ssl_cert_reqs=None)
+redis_conn=redis.from_url(os.environ.get("REDIS_URL"))
 # # Setup our redis connection for storing the denylist tokens
 # redis_conn = Redis(host='localhost', port=6379, db=0, decode_responses=True)
 
