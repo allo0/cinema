@@ -1,7 +1,10 @@
+import os
 from fastapi_jwt_auth import AuthJWT
 from pydantic import BaseModel
 from redis import Redis
 from datetime import timedelta
+import urllib.parse
+
 
 
 # in production you can use Settings management
@@ -20,8 +23,13 @@ def get_config():
     return Settings()
 
 
-# Setup our redis connection for storing the denylist tokens
-redis_conn = Redis(host='localhost', port=6379, db=0, decode_responses=True)
+
+redis_url = os.getenv('REDISTOGO_URL')
+urllib.parse.uses_netloc.append('redis')
+url = urllib.parse.urlparse(redis_url)
+redis_conn = Redis(host=url.hostname, port=url.port, db=0, password=url.password)
+# # Setup our redis connection for storing the denylist tokens
+# redis_conn = Redis(host='localhost', port=6379, db=0, decode_responses=True)
 
 
 # Create our function to check if a token has been revoked. In this simple
