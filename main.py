@@ -1,9 +1,13 @@
-from fastapi import Depends, FastAPI, HTTPException, Request, Response
+import json
+from urllib import request
+
+from fastapi import Depends, FastAPI, HTTPException, Request, Response, requests
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi_jwt_auth import AuthJWT
 from fastapi_jwt_auth.exceptions import AuthJWTException
 from sqlalchemy.orm import Session
+from starlette.responses import RedirectResponse
 
 import models.token
 from base.config import settings
@@ -15,6 +19,7 @@ from models.user.userSchema import UserLogin
 app = FastAPI(title=settings.PROJECT_NAME, version=settings.PROJECT_VERSION)
 
 origins = [
+    "https://cinema-front-end.herokuapp.com/",
     "https://cinema-thingy-1124.herokuapp.com",
     "http://127.0.0.1:5000",
     "http://localhost:4200",
@@ -66,25 +71,33 @@ def create_user(user: userSchema.UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="User already registered")
     return userOperation.create_user(db=db, user_=user)
 
+# TODO if the user is from a google account, the first time they log, prompt them to add a password and then update the field int the db, in order to be able to check for the password
+@app.post("/v1/googleToken/")
+def create_user(user: userSchema.UserBase, db: Session = Depends(get_db)):
+    print(user)
+    return user
+
 
 # provide a method to create access tokens. The create_access_token()
 # function is used to actually generate the token to use authorization
 # later in endpoint protected
-@app.post('/v1/login')
+@app.post('/v1/token')
 def login(user: UserLogin, db: Session = Depends(get_db), Authorize: AuthJWT = Depends()):
-    # user = userOperation.get_user(db, username=token_data.username)
-    user = userOperation.authenticate_user(db, user.username, user.password)
+    db_user = userOperation.check_if_user_exists(db, email=user.email, username=user.username)
+    # if not db_user:
 
+
+    user = userOperation.authenticate_user(db, user.email, user.username, user.password)
     if not user:
-        raise HTTPException(status_code=401, detail="Wrong username or password")
+        raise HTTPException(status_code=401, detail="Wrong username,email or password")
     """
     create_access_token supports an optional 'fresh' argument,
     which marks the token as fresh or non-fresh accordingly.
     As we just verified their username and password, we are
     going to mark the token as fresh here.
     """
-    access_token = Authorize.create_access_token(subject=user.username, fresh=True)
-    refresh_token = Authorize.create_refresh_token(subject=user.username)
+    access_token = Authorize.create_access_token(subject=user.email, fresh=True)
+    refresh_token = Authorize.create_refresh_token(subject=user.email)
     return {"access_type": "Bearer", "access_token": access_token, "refresh_token": refresh_token}
 
 
