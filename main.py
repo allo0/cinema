@@ -1,5 +1,3 @@
-import json
-from urllib import request
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, requests
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,7 +5,6 @@ from fastapi.responses import JSONResponse
 from fastapi_jwt_auth import AuthJWT
 from fastapi_jwt_auth.exceptions import AuthJWTException
 from sqlalchemy.orm import Session
-from starlette.responses import RedirectResponse
 
 import models.token
 from base.config import settings
@@ -81,7 +78,7 @@ def create_user(user: userSchema.UserBase, db: Session = Depends(get_db)):
 # provide a method to create access tokens. The create_access_token()
 # function is used to actually generate the token to use authorization
 # later in endpoint protected
-@app.post('/v1/token')
+@app.post('/v1/login')
 def login(user: UserLogin, db: Session = Depends(get_db), Authorize: AuthJWT = Depends()):
     db_user = userOperation.check_if_user_exists(db, email=user.email, username=user.username)
     # if not db_user:
