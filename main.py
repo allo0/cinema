@@ -16,7 +16,7 @@ from models.user.userSchema import UserLogin
 app = FastAPI(title=settings.PROJECT_NAME, version=settings.PROJECT_VERSION)
 
 origins = [
-    "https://cinema-front-end.herokuapp.com/",
+    "https://cinema-front-end.herokuapp.com",
     "https://cinema-thingy-1124.herokuapp.com",
     "http://127.0.0.1:5000",
     "http://localhost:4200",
@@ -80,7 +80,7 @@ def create_user(user: userSchema.UserBase, db: Session = Depends(get_db)):
 # later in endpoint protected
 @app.post('/v1/login')
 def login(user: UserLogin, db: Session = Depends(get_db), Authorize: AuthJWT = Depends()):
-    db_user = userOperation.check_if_user_exists(db, email=user.email, username=user.username)
+    # db_user = userOperation.check_if_user_exists(db, email=user.email, username=user.username)
     # if not db_user:
 
 
