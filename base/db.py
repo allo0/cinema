@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 #     password='mao2mao2mao',
 #     database='test'
 # )
-SQLALCHEMY_DATABASE_URL = "mysql://root:mao2mao2mao@softendb.ccn9u77vnttp.us-east-2.rds.amazonaws.com/test"
+SQLALCHEMY_DATABASE_URL = "mysql://root:mao2mao2mao@mysoftendb.ccn9u77vnttp.us-east-2.rds.amazonaws.com/test"
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, echo=True

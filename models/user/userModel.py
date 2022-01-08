@@ -10,8 +10,9 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
-    name = Column(String)
-    surname = Column(String)
+    firstName = Column(String)
+    lastName = Column(String)
+    photoUrl = Column(String)
     createdAt = Column(TIMESTAMP)
     is_active = Column(Boolean, default=False)
 

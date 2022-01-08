@@ -4,23 +4,26 @@ from pydantic import BaseModel
 
 class UserBase(BaseModel):
     email: str
-    username: str
-    name: Optional[str] = None
-    surname: Optional[str] = None
-
+    username: Optional[str] = None
+    firstName: Optional[str] = None
+    lastName: Optional[str] = None
+    photoUrl: Optional[str] = None
 
 class UserCreate(UserBase):
     password: str
 
 
+
+
 class UserLogin(BaseModel):
-    username: str
+    username: Optional[str] = None
     password: str
+    email: Optional[str] = None
 
 
 class User(UserBase):
     id: int
-    is_active: bool
+    is_active: Optional[str] = None
 
     class Config:
         orm_mode = True

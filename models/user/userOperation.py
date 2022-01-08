@@ -1,3 +1,5 @@
+from typing import Optional
+
 from passlib.context import CryptContext
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
@@ -6,8 +8,10 @@ from models.user import userSchema, userModel
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-def get_user(db: Session, username: str):
-    return db.query(userModel.User).filter(userModel.User.username == username).first()
+def get_user(db: Session, email: str, username: Optional[str] = None):
+    return db.query(userModel.User) \
+        .filter(or_(userModel.User.email == email, userModel.User.username == username)) \
+        .first()
 
 
 def get_user_by_email(db: Session, email: str):
@@ -26,7 +30,7 @@ def get_users(db: Session, skip: int = 0, limit: int = 100):
 
 def create_user(db: Session, user_: userSchema.UserCreate):
     hashed_password = get_password_hash(user_.password)
-    db_user = userModel.User(email=user_.email, username=user_.username, name=user_.name, surname=user_.surname,
+    db_user = userModel.User(email=user_.email, username=user_.username, name=user_.firstName, surname=user_.lastName,
                              hashed_password=hashed_password)
     db.add(db_user)
     db.commit()
@@ -42,8 +46,8 @@ def get_password_hash(password):
     return pwd_context.hash(password)
 
 
-def authenticate_user(db: Session, username: str, password: str):
-    user = get_user(db, username=username)
+def authenticate_user(db: Session, email: str, username: str, password: str):
+    user = get_user(db, email=email, username=username)
     if not user:
         return False
     if not verify_password(password, user.hashed_password):
