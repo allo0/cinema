@@ -1,4 +1,5 @@
 import os
+
 import redis
 from fastapi_jwt_auth import AuthJWT
 from pydantic import BaseModel
@@ -27,9 +28,9 @@ def get_config():
 # # Setup our redis connection for storing the denylist tokens
 # url = urlparse(os.environ.get("REDIS_URL"))
 # redis_conn = Redis(host=url.hostname, port=url.port, username=url.username, password=url.password, ssl=True, ssl_cert_reqs=None)
-# redis_conn=redis.from_url(os.environ.get("REDIS_URL"))
+redis_conn=redis.from_url(os.environ.get("REDIS_URL"))
 
-redis_conn = Redis(host='localhost', port=6379, db=0, decode_responses=True)
+# redis_conn = Redis(host='localhost', port=6379, db=0, decode_responses=True)
 
 
 # Create our function to check if a token has been revoked. In this simple
