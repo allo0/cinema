@@ -30,7 +30,7 @@ def get_users(db: Session, skip: int = 0, limit: int = 100):
 
 def create_user(db: Session, user_: userSchema.UserCreate):
     hashed_password = get_password_hash(user_.password)
-    db_user = userModel.User(email=user_.email, username=user_.username, name=user_.firstName, surname=user_.lastName,
+    db_user = userModel.User(email=user_.email, username=user_.username, firstName=user_.firstName, lastName=user_.lastName,
                              hashed_password=hashed_password)
     db.add(db_user)
     db.commit()
