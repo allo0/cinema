@@ -8,6 +8,7 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True)
+    user_id = Column(String, unique=True, index=True)
     username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     firstName = Column(String)
@@ -15,5 +16,3 @@ class User(Base):
     photoUrl = Column(String)
     createdAt = Column(TIMESTAMP)
     is_active = Column(Boolean, default=False)
-
-

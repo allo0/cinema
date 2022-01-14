@@ -3,9 +3,9 @@ from mysql.connector import Error
 
 try:
     connection = mysql.connector.connect(
-        host = 'softendb.ccn9u77vnttp.us-east-2.rds.amazonaws.com',
-        user = 'root',
-        password = 'mao2mao2mao',
+        host='mysoftendb.ccn9u77vnttp.us-east-2.rds.amazonaws.com',
+        user='root',
+        password='mao2mao2mao',
         database='test'
     )
     if connection.is_connected():

@@ -18,9 +18,10 @@ def get_user_by_email(db: Session, email: str):
     return db.query(userModel.User).filter(userModel.User.email == email).first()
 
 
-def check_if_user_exists(db: Session, email: str, username: str):
+def check_if_user_exists(db: Session, email: str, username: str, user_id: Optional[str] = None):
     return db.query(userModel.User) \
-        .filter(or_(userModel.User.email == email, userModel.User.username == username)) \
+        .filter(
+        or_(userModel.User.email == email, userModel.User.user_id == user_id, userModel.User.username == username)) \
         .first()
 
 
@@ -30,7 +31,8 @@ def get_users(db: Session, skip: int = 0, limit: int = 100):
 
 def create_user(db: Session, user_: userSchema.UserCreate):
     hashed_password = get_password_hash(user_.password)
-    db_user = userModel.User(email=user_.email, username=user_.username, firstName=user_.firstName, lastName=user_.lastName,
+    db_user = userModel.User(email=user_.email, user_id=user_.user_id, username=user_.username,
+                             firstName=user_.firstName, lastName=user_.lastName,
                              hashed_password=hashed_password)
     db.add(db_user)
     db.commit()
@@ -46,8 +48,12 @@ def get_password_hash(password):
     return pwd_context.hash(password)
 
 
-def authenticate_user(db: Session, email: str, username: str, password: str):
+def authenticate_user(db: Session, email: str, username: str, password: str, user_id: Optional[str] = None):
     user = get_user(db, email=email, username=username)
+    # google and other 3rd party authentication
+    # if user
+
+    # Normal User authentication
     if not user:
         return False
     if not verify_password(password, user.hashed_password):

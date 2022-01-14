@@ -61,12 +61,13 @@ def get_db():
         db.close()
 
 
-@app.post("/v1/register/", response_model=userSchema.User)
+@app.post("/v1/register/")
 def create_user(user: userSchema.UserCreate, db: Session = Depends(get_db)):
     db_user = userOperation.check_if_user_exists(db, email=user.email, username=user.username)
     if db_user:
-        raise HTTPException(status_code=400, detail="User already registered")
-    return userOperation.create_user(db=db, user_=user)
+        return {"status": 400, "user_info": {}}
+
+    return {"status": 200, "user_info": userOperation.create_user(db=db, user_=user)}
 
 
 # TODO if the user is from a google account, the first time they log, prompt them to add a password and then update the field int the db, in order to be able to check for the password
@@ -79,14 +80,15 @@ def create_user(user: userSchema.UserBase, db: Session = Depends(get_db)):
 # provide a method to create access tokens. The create_access_token()
 # function is used to actually generate the token to use authorization
 # later in endpoint protected
-@app.post('/v1/accessToken')
+@app.post('/v1/login')
 def login(user: UserLogin, db: Session = Depends(get_db), Authorize: AuthJWT = Depends()):
-    # db_user = userOperation.check_if_user_exists(db, email=user.email, username=user.username)
-    # if not db_user:
-
+    db_user = userOperation.check_if_user_exists(db, email=user.email, username=user.username, user_id=user.user_id)
+    if not db_user:
+        userOperation.create_user(db=db, user_=user)
     user = userOperation.authenticate_user(db, user.email, user.username, user.password)
     if not user:
-        raise HTTPException(status_code=401, detail="Wrong username,email or password")
+        return {"status": 401, "message": "Wrong username,email or password"}
+
     """
     create_access_token supports an optional 'fresh' argument,
     which marks the token as fresh or non-fresh accordingly.
