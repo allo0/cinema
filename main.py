@@ -63,7 +63,7 @@ def get_db():
 
 @app.post("/v1/register/")
 def create_user(user: userSchema.UserCreate, db: Session = Depends(get_db)):
-    db_user = userOperation.check_if_user_exists(db, email=user.email, username=user.username)
+    db_user = userOperation.check_if_user_exists(db, email=user.email)
     if db_user:
         return {"status": 400, "user_info": {}}
 
@@ -82,7 +82,7 @@ def create_user(user: userSchema.UserBase, db: Session = Depends(get_db)):
 # later in endpoint protected
 @app.post('/v1/login')
 def login(user: UserLogin, db: Session = Depends(get_db), Authorize: AuthJWT = Depends()):
-    db_user = userOperation.check_if_user_exists(db, email=user.email, username=user.username, user_id=user.user_id)
+    db_user = userOperation.check_if_user_exists(db, email=user.email)
     if not db_user:
         userOperation.create_user(db=db, user_=user)
     user = userOperation.authenticate_user(db, user.email, user.username, user.password)

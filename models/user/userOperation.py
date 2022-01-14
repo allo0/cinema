@@ -18,10 +18,10 @@ def get_user_by_email(db: Session, email: str):
     return db.query(userModel.User).filter(userModel.User.email == email).first()
 
 
-def check_if_user_exists(db: Session, email: str, username: str, user_id: Optional[str] = None):
+def check_if_user_exists(db: Session, email: str):
     return db.query(userModel.User) \
         .filter(
-        or_(userModel.User.email == email, userModel.User.user_id == user_id, userModel.User.username == username)) \
+        or_(userModel.User.email == email)) \
         .first()
 
 
