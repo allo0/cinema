@@ -1,9 +1,12 @@
+import os
+
 import redis
 from fastapi_jwt_auth import AuthJWT
 from pydantic import BaseModel
 from redis import Redis
 from datetime import timedelta
-from base.config import Settings as stngs
+from base.config import Settings
+from base.config import ENV
 
 
 # in production you can use Settings management
@@ -21,10 +24,13 @@ class Settings(BaseModel):
 def get_config():
     return Settings()
 
-
 # # Setup our redis connection for storing the denylist tokens
-redis_conn = redis.from_url(stngs.REDIS_URL)
-# redis_conn = Redis(host='localhost', port=6379, db=0, decode_responses=True)
+
+if ENV == "Heroku":
+    REDIS_URL = os.environ.get("REDIS_URL")
+    redis_conn = redis.from_url(REDIS_URL)
+elif ENV == "Local":
+    redis_conn = Redis(host='localhost', port=6379, db=0, decode_responses=True)
 
 
 # Create our function to check if a token has been revoked. In this simple

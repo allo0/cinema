@@ -1,3 +1,5 @@
+import json
+from typing import Optional
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, requests
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -10,7 +12,7 @@ from base.config import settings
 from base.db import SessionLocal
 from models.token import redis_conn
 from models.user import userSchema, userOperation
-from models.user.userSchema import UserLogin
+from models.user.userSchema import UserLogin, UserCreate
 
 app = FastAPI(title=settings.PROJECT_NAME, version=settings.PROJECT_VERSION)
 
@@ -63,31 +65,40 @@ def get_db():
 
 @app.post("/v1/register/")
 def create_user(user: userSchema.UserCreate, db: Session = Depends(get_db)):
-    db_user = userOperation.check_if_user_exists(db, email=user.email)
+    db_user = userOperation.check_if_user_exists(db, email=user.email, username=user.username)
     if db_user:
-        return {"status": 400, "user_info": {}}
+        return {"status": 4004, "user_info": {}}
 
     return {"status": 200, "user_info": userOperation.create_user(db=db, user_=user)}
-
-
-# TODO if the user is from a google account, the first time they log, prompt them to add a password and then update the field int the db, in order to be able to check for the password
-@app.post("/v1/googleToken/")
-def create_user(user: userSchema.UserBase, db: Session = Depends(get_db)):
-    print(user)
-    return user
 
 
 # provide a method to create access tokens. The create_access_token()
 # function is used to actually generate the token to use authorization
 # later in endpoint protected
 @app.post('/v1/login')
-def login(user: UserLogin, db: Session = Depends(get_db), Authorize: AuthJWT = Depends()):
-    db_user = userOperation.check_if_user_exists(db, email=user.email)
-    if not db_user:
+def login(user: UserLogin, db: Session = Depends(get_db),
+          Authorize: AuthJWT = Depends()):
+    db_user = userOperation.get_user_by_email(db, email=user.email)
+    db_user_id = userOperation.get_user_by_user_id(db, user_id=user.id)
+
+    if (db_user is None and db_user_id is None) and user.id:
         userOperation.create_user(db=db, user_=user)
-    user = userOperation.authenticate_user(db, user.email, user.username, user.password)
-    if not user:
-        return {"status": 401, "message": "Wrong username,email or password"}
+        user = userOperation.authenticate_user(db, email=user.email, username=user.username, user_id=user.id)
+        if not user:
+            return {"status": 4001, "message": "Wrong username,email or password"}
+    elif db_user and db_user_id and db_user.user_id is not None:
+
+        user = userOperation.authenticate_user(db, email=user.email, username=user.username, user_id=user.id)
+        if not user:
+            return {"status": 4002, "message": "Wrong username,email or password"}
+
+    elif db_user and user.email and user.password:
+        user = userOperation.authenticate_user(db, email=user.email, username=user.username, password=user.password,
+                                               user_id=user.id)
+        if not user:
+            return {"status": 4003, "message": "Wrong username,email or password"}
+    else:
+        return {"status": 4000, "message": "Wrong username,email or password"}
 
     """
     create_access_token supports an optional 'fresh' argument,
@@ -95,9 +106,12 @@ def login(user: UserLogin, db: Session = Depends(get_db), Authorize: AuthJWT = D
     As we just verified their username and password, we are
     going to mark the token as fresh here.
     """
-    access_token = Authorize.create_access_token(subject=user.email, fresh=True)
-    refresh_token = Authorize.create_refresh_token(subject=user.email)
-    return {"access_type": "Bearer", "access_token": access_token, "refresh_token": refresh_token}
+    data = str({"email": user.email, "firstName": user.firstName, "lastName": user.lastName})
+    access_token = Authorize.create_access_token(
+        subject=data,
+        fresh=True)
+    refresh_token = Authorize.create_refresh_token(subject=data)
+    return {"status": 200, "access_type": "Bearer", "access_token": access_token, "refresh_token": refresh_token}
 
 
 @app.post('/v1/refresh')
@@ -122,7 +136,7 @@ def access_revoke(Authorize: AuthJWT = Depends()):
 
     jti = Authorize.get_raw_jwt()['jti']
     redis_conn.setex(jti, tokenSettings.access_expires, 'true')
-    return {"status": "200", "message": "Access token has been revoke, logged out"}
+    return {"status": 200, "message": "Access token has been revoke, logged out"}
 
 
 # Endpoint for revoking the current users refresh token
@@ -132,17 +146,18 @@ def refresh_revoke(Authorize: AuthJWT = Depends()):
 
     jti = Authorize.get_raw_jwt()['jti']
     redis_conn.setex(jti, tokenSettings.refresh_expires, 'true')
-    return {"detail": "Refresh token has been revoke"}
+    return {"status": 200, "detail": "Refresh token has been revoke"}
 
 
 # Any valid JWT access token can access this endpoint
 @app.get('/v1/protected')
-def protected(Authorize: AuthJWT = Depends(), db: Session = Depends(get_db)):
+def protected(Authorize: AuthJWT = Depends()):
     Authorize.jwt_required()
-
     current_user = Authorize.get_jwt_subject()
-    userDetails = userOperation.get_user(db, current_user)
-    return {"details": userDetails}
+    current_user = current_user.replace('\'', '"')
+    current_user = json.loads(current_user)
+
+    return {"status": 200, "details": current_user}
 
 
 # Only fresh JWT access token can access this endpoint
@@ -151,4 +166,4 @@ def protected_fresh(Authorize: AuthJWT = Depends()):
     Authorize.fresh_jwt_required()
 
     current_user = Authorize.get_jwt_subject()
-    return {"user": current_user}
+    return {"status": 200, "user": current_user}

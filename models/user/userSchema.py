@@ -13,20 +13,21 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    password: str
+    id: Optional[str] = None
+    password: Optional[str] = None
 
 
 
 
-class UserLogin(BaseModel):
+class UserLogin(UserBase):
     username: Optional[str] = None
-    password: str
+    password: Optional[str] = None
     email: Optional[str] = None
-    user_id: Optional[str] = None
+    id: Optional[str] = None
 
 
 class User(UserBase):
-    id: int
+    user_id: Optional[str] = None
     is_active: Optional[bool] = None
 
     class Config:
