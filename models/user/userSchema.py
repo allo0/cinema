@@ -20,7 +20,7 @@ class UserCreate(UserBase):
 
 
 class UserType(BaseModel):
-    userType: str
+    userType: int
     user_id: str
 
     class Config:

@@ -71,12 +71,12 @@ def get_password_hash(password):
 def authenticate_user(db: Session, email: str, username: str, password: Optional[str] = None,
                       user_id: Optional[str] = None):
     user = get_user(db, email=email)
-    if user:
-        recent_user = get_user_by_email(db, email)
-        userType = get_userType(db, recent_user.id)
-        print(userType.userType)
-        user.userType = userType.userType
-    print(user.userType)
+    # if user:
+    #     recent_user = get_user_by_email(db, email)
+    #     userType = get_userType(db, recent_user.id)
+    #     print(userType.userType)
+    #     user.userType = userType.userType
+    # print(user.userType)
     # There is a user_id , so it is a 3rd party authentication
     if email and user_id:
         # check if the user_id returned is the same as the one in the request

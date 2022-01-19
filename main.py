@@ -13,7 +13,8 @@ from base.db import SessionLocal
 from models.token import redis_conn
 from models.user import userSchema, userOperation
 from models.user.userSchema import UserLogin, UserCreate
-
+from base.config import MYSQLLPASS,DBHOST
+print (MYSQLLPASS)
 app = FastAPI(title=settings.PROJECT_NAME, version=settings.PROJECT_VERSION)
 
 origins = [
@@ -106,7 +107,8 @@ def login(user: UserLogin, db: Session = Depends(get_db),
     As we just verified their username and password, we are
     going to mark the token as fresh here.
     """
-    data = str({"email": user.email, "firstName": user.firstName, "lastName": user.lastName,"userType":user.userType})
+    data = str({"email": user.email, "firstName": user.firstName, "lastName": user.lastName})
+    # , "userType": user.userType
     access_token = Authorize.create_access_token(
         subject=data,
         fresh=True)

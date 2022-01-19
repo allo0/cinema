@@ -25,10 +25,9 @@ class User(Base):
 
 
 class userType_Enum(Integer, Enum):
-    user = 0
-    ticketer = 1
-    meh = 2
-    admin = 3
+    user = 1
+    ticketer = 2
+    admin = 4
 
 
 class UserType(Base):
