@@ -1,5 +1,7 @@
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+from models.user.userModel import userType_Enum
 
 
 class UserBase(BaseModel):
@@ -17,6 +19,12 @@ class UserCreate(UserBase):
     password: Optional[str] = None
 
 
+class UserType(BaseModel):
+    userType: str
+    user_id: str
+
+    class Config:
+        orm_mode = True
 
 
 class UserLogin(UserBase):

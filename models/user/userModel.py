@@ -1,5 +1,7 @@
+from pydantic import Field
+
 from base.db import Base
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, TIMESTAMP
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, TIMESTAMP, Enum
 from sqlalchemy.orm import relationship
 
 
@@ -16,3 +18,24 @@ class User(Base):
     photoUrl = Column(String)
     createdAt = Column(TIMESTAMP)
     is_active = Column(Boolean, default=False)
+
+    user_type = relationship("UserType", back_populates="owner")
+
+    pass
+
+
+class userType_Enum(Integer, Enum):
+    user = 0
+    ticketer = 1
+    meh = 2
+    admin = 3
+
+
+class UserType(Base):
+    __tablename__ = "userType"
+
+    id = Column(Integer, primary_key=True, index=True)
+    userType = Column(Integer)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+
+    owner = relationship("User", back_populates="user_type")

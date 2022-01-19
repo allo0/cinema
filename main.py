@@ -106,7 +106,7 @@ def login(user: UserLogin, db: Session = Depends(get_db),
     As we just verified their username and password, we are
     going to mark the token as fresh here.
     """
-    data = str({"email": user.email, "firstName": user.firstName, "lastName": user.lastName})
+    data = str({"email": user.email, "firstName": user.firstName, "lastName": user.lastName,"userType":user.userType})
     access_token = Authorize.create_access_token(
         subject=data,
         fresh=True)
@@ -167,3 +167,6 @@ def protected_fresh(Authorize: AuthJWT = Depends()):
 
     current_user = Authorize.get_jwt_subject()
     return {"status": 200, "user": current_user}
+
+
+# @app.get('/v1/userType')

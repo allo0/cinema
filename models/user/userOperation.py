@@ -30,6 +30,10 @@ def check_if_user_exists(db: Session, email: str, username: Optional[str] = None
         .first()
 
 
+def get_userType(db: Session, uId: str):
+    return db.query(userModel.UserType).filter(userModel.UserType.user_id == uId).first()
+
+
 def get_users(db: Session, skip: int = 0, limit: int = 100):
     return db.query(userModel.User).offset(skip).limit(limit).all()
 
@@ -37,7 +41,7 @@ def get_users(db: Session, skip: int = 0, limit: int = 100):
 def create_user(db: Session, user_: userSchema.UserCreate):
     hashed_password = ''
 
-    if (user_.password):
+    if user_.password:
         hashed_password = get_password_hash(user_.password)
 
     db_user = userModel.User(email=user_.email, user_id=user_.id, username=user_.username,
@@ -45,7 +49,14 @@ def create_user(db: Session, user_: userSchema.UserCreate):
                              hashed_password=hashed_password)
     db.add(db_user)
     db.commit()
+
+    recent_user = get_user_by_email(db, user_.email)
+    db_user_type = userModel.UserType(userType=userModel.userType_Enum.user, user_id=recent_user.id)
+    db.add(db_user_type)
+    db.commit()
+
     db.refresh(db_user)
+
     return db_user
 
 
@@ -60,7 +71,12 @@ def get_password_hash(password):
 def authenticate_user(db: Session, email: str, username: str, password: Optional[str] = None,
                       user_id: Optional[str] = None):
     user = get_user(db, email=email)
-
+    if user:
+        recent_user = get_user_by_email(db, email)
+        userType = get_userType(db, recent_user.id)
+        print(userType.userType)
+        user.userType = userType.userType
+    print(user.userType)
     # There is a user_id , so it is a 3rd party authentication
     if email and user_id:
         # check if the user_id returned is the same as the one in the request
