@@ -1,6 +1,8 @@
 import json
+from datetime import datetime
 from typing import Optional
-from fastapi import Depends, FastAPI, HTTPException, Request, Response, requests
+
+from fastapi import Depends, FastAPI, HTTPException, Request, Response, requests, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi_jwt_auth import AuthJWT
@@ -10,11 +12,12 @@ from sqlalchemy.orm import Session
 import models.token
 from base.config import settings
 from base.db import SessionLocal
-from models.token import redis_conn
+from models.token import redis_conn, Settings
 from models.user import userSchema, userOperation
+from models.user.userOperation import checkUserType, get_user_by_email
 from models.user.userSchema import UserLogin, UserCreate
-from base.config import MYSQLLPASS,DBHOST
-print (MYSQLLPASS)
+from base.config import MYSQLLPASS, DBHOST
+
 app = FastAPI(title=settings.PROJECT_NAME, version=settings.PROJECT_VERSION)
 
 origins = [
@@ -107,13 +110,24 @@ def login(user: UserLogin, db: Session = Depends(get_db),
     As we just verified their username and password, we are
     going to mark the token as fresh here.
     """
-    data = str({"email": user.email, "firstName": user.firstName, "lastName": user.lastName})
-    # , "userType": user.userType
+
+    userType = userOperation.get_userType(db, user.id)
+
+    data = str(
+        {"email": user.email, "firstName": user.firstName, "lastName": user.lastName, "userType": userType.userType})
+
     access_token = Authorize.create_access_token(
         subject=data,
+        algorithm="HS256",
         fresh=True)
     refresh_token = Authorize.create_refresh_token(subject=data)
     return {"status": 200, "access_type": "Bearer", "access_token": access_token, "refresh_token": refresh_token}
+
+
+@app.get('/v1/isvalid')
+def isvalid(Authorize: AuthJWT = Depends()):
+    Authorize.jwt_required()
+    return {"status": 200, "message": "Token is valid"}
 
 
 @app.post('/v1/refresh')
@@ -171,4 +185,10 @@ def protected_fresh(Authorize: AuthJWT = Depends()):
     return {"status": 200, "user": current_user}
 
 
-# @app.get('/v1/userType')
+# @app.post('/v1/userType')
+# def protected(user: userSchema.User, Authorize: AuthJWT = Depends(), db: Session = Depends(get_db)):
+#     Authorize.jwt_required()
+#     user = get_user_by_email(db, user.email)
+#     userType = checkUserType(db, user.id)
+#
+#     return {"status": 4005, "details": userType}

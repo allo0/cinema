@@ -1,12 +1,14 @@
 import os
+from typing import Optional
 
 import redis
 from fastapi_jwt_auth import AuthJWT
 from pydantic import BaseModel
 from redis import Redis
-from datetime import timedelta
-from base.config import Settings
+from datetime import timedelta, datetime
+
 from base.config import ENV
+
 
 
 # in production you can use Settings management

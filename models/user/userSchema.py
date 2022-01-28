@@ -13,7 +13,6 @@ class UserBase(BaseModel):
     lastName: Optional[str] = None
     photoUrl: Optional[str] = None
 
-
 class UserCreate(UserBase):
     id: Optional[str] = None
     password: Optional[str] = None
@@ -25,6 +24,10 @@ class UserType(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class UserTypeCreate(UserType):
+    pass
 
 
 class UserLogin(UserBase):

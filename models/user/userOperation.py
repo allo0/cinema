@@ -4,6 +4,7 @@ from passlib.context import CryptContext
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from models.user import userSchema, userModel
+from models.user.userModel import userType_Enum
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -71,12 +72,7 @@ def get_password_hash(password):
 def authenticate_user(db: Session, email: str, username: str, password: Optional[str] = None,
                       user_id: Optional[str] = None):
     user = get_user(db, email=email)
-    # if user:
-    #     recent_user = get_user_by_email(db, email)
-    #     userType = get_userType(db, recent_user.id)
-    #     print(userType.userType)
-    #     user.userType = userType.userType
-    # print(user.userType)
+
     # There is a user_id , so it is a 3rd party authentication
     if email and user_id:
         # check if the user_id returned is the same as the one in the request
@@ -91,3 +87,29 @@ def authenticate_user(db: Session, email: str, username: str, password: Optional
             return user
 
     return False
+
+
+def checkUserType(db: Session, id: str):
+    userType = get_userType(db, id)
+    type = []
+    if userType.userType is (userType_Enum.user):
+        type.append("user")
+    elif userType.userType is (userType_Enum.ticketer):
+        type.append("ticketer")
+    elif userType.userType is (userType_Enum.admin):
+        type.append("admin")
+    elif userType.userType is (userType_Enum.user | userType_Enum.admin):
+        type.append("user")
+        type.append("admin")
+    elif userType.userType is (userType_Enum.user | userType_Enum.ticketer):
+        type.append("user")
+        type.append("ticketer")
+    elif userType.userType is (userType_Enum.user | userType_Enum.admin | userType_Enum.ticketer):
+        type.append("user")
+        type.append("ticketer")
+        type.append("admin")
+    elif userType.userType is (userType_Enum.admin | userType_Enum.ticketer):
+        type.append("admin")
+        type.append("ticketer")
+
+    return {"type": type}
