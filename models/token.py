@@ -17,7 +17,7 @@ class Settings(BaseModel):
     authjwt_secret_key: str = "3d781d186bbeaaec8405d529c23a18a7d9c53e3bf94b1c3ea259df93e42fbcfe"
     authjwt_denylist_enabled: bool = True
     authjwt_denylist_token_checks: set = {"access", "refresh"}
-    access_expires: int = timedelta(minutes=15)
+    access_expires: int = timedelta(minutes=45)
     refresh_expires: int = timedelta(days=30)
 
 

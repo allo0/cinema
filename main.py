@@ -1,8 +1,7 @@
 import json
-from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
-from fastapi import Depends, FastAPI, HTTPException, Request, Response, requests, Header
+from fastapi import Depends, FastAPI, Request, Response, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi_jwt_auth import AuthJWT
@@ -12,14 +11,15 @@ from sqlalchemy.orm import Session
 import models.token
 from base.config import settings
 from base.db import SessionLocal
-from models.token import redis_conn, Settings
+from models.movies import moviesSchema
+from models.rooms import roomsSchema
+from models.scheduling import schedulingSchema
+from models.token import redis_conn
 from models.user import userSchema, userOperation
 from models.user.userOperation import checkUserType, get_user_by_email
-from models.user.userSchema import UserLogin, UserCreate
-from base.config import MYSQLLPASS, DBHOST
+from models.user.userSchema import UserLogin
 
 app = FastAPI(title=settings.PROJECT_NAME, version=settings.PROJECT_VERSION)
-
 origins = [
     "*",
     "https://cinema-front-end.herokuapp.com/",
@@ -67,7 +67,7 @@ def get_db():
         db.close()
 
 
-@app.post("/v1/register/")
+@app.post("/v1/user/register/")
 def create_user(user: userSchema.UserCreate, db: Session = Depends(get_db)):
     db_user = userOperation.check_if_user_exists(db, email=user.email, username=user.username)
     if db_user:
@@ -79,9 +79,8 @@ def create_user(user: userSchema.UserCreate, db: Session = Depends(get_db)):
 # provide a method to create access tokens. The create_access_token()
 # function is used to actually generate the token to use authorization
 # later in endpoint protected
-@app.post('/v1/login')
-def login(user: UserLogin, db: Session = Depends(get_db),
-          Authorize: AuthJWT = Depends()):
+@app.post('/v1/user/login')
+def login(user: UserLogin, db: Session = Depends(get_db), Authorize: AuthJWT = Depends()):
     db_user = userOperation.get_user_by_email(db, email=user.email)
     db_user_id = userOperation.get_user_by_user_id(db, user_id=user.id)
 
@@ -124,13 +123,13 @@ def login(user: UserLogin, db: Session = Depends(get_db),
     return {"status": 200, "access_type": "Bearer", "access_token": access_token, "refresh_token": refresh_token}
 
 
-@app.get('/v1/isvalid')
+@app.get('/v1/token/isvalid')
 def isvalid(Authorize: AuthJWT = Depends()):
     Authorize.jwt_required()
     return {"status": 200, "message": "Token is valid"}
 
 
-@app.post('/v1/refresh')
+@app.post('/v1/token/refresh')
 def refresh(Authorize: AuthJWT = Depends()):
     """
     The jwt_refresh_token_required() function insures a valid refresh
@@ -146,7 +145,7 @@ def refresh(Authorize: AuthJWT = Depends()):
 
 
 # Basically Logout function
-@app.delete('/v1/access-revoke')
+@app.delete('/v1/token/access-revoke')
 def access_revoke(Authorize: AuthJWT = Depends()):
     Authorize.jwt_required()
 
@@ -156,7 +155,7 @@ def access_revoke(Authorize: AuthJWT = Depends()):
 
 
 # Endpoint for revoking the current users refresh token
-@app.delete('/v1/refresh-revoke')
+@app.delete('/v1/token/refresh-revoke')
 def refresh_revoke(Authorize: AuthJWT = Depends()):
     Authorize.jwt_refresh_token_required()
 
@@ -185,10 +184,69 @@ def protected_fresh(Authorize: AuthJWT = Depends()):
     return {"status": 200, "user": current_user}
 
 
-# @app.post('/v1/userType')
-# def protected(user: userSchema.User, Authorize: AuthJWT = Depends(), db: Session = Depends(get_db)):
-#     Authorize.jwt_required()
-#     user = get_user_by_email(db, user.email)
-#     userType = checkUserType(db, user.id)
-#
-#     return {"status": 4005, "details": userType}
+@app.post('/v1/user/userType')
+def protected(user: userSchema.User, Authorize: AuthJWT = Depends(), db: Session = Depends(get_db)):
+    Authorize.jwt_required()
+    user = get_user_by_email(db, user.email)
+    userType = checkUserType(db, user.id)
+
+    return {"status": 4005, "details": userType}
+
+
+@app.post('/v1/movies/addMovie')
+def addMovie(movie: moviesSchema.MovieCreate, db: Session = Depends(get_db), Authorize: AuthJWT = Depends()):
+    Authorize.jwt_required()
+    from models.movies import moviesOperation
+
+    return {"status": 200, "movie_info": moviesOperation.add_movie(db=db, movie_=movie)}
+
+
+@app.post('/v1/rooms/addRoom')
+def addRoom(room: roomsSchema.Rooms, db: Session = Depends(get_db), Authorize: AuthJWT = Depends()):
+    Authorize.jwt_required()
+    from models.rooms import roomsOperation
+
+    return {"status": 200, "movie_info": roomsOperation.add_room(db=db, room_=room)}
+
+
+@app.post('/v1/schedule/addMovieToSchedule')
+def addMovieToSchedule(srm: schedulingSchema.SchedulingCreate, db: Session = Depends(get_db),
+                       Authorize: AuthJWT = Depends()):
+    Authorize.jwt_required()
+    from models.scheduling import srmOperation
+    trans_completed = srmOperation.add_to_schedule(db=db, movie=srm.movie, details=srm.details)
+    if not trans_completed:
+        return {"status": 400,
+                "scheduling_info": "Schedule was unsuccessful"}
+    return {"status": 200,
+            "scheduling_info": "Schedule updated successfully"}
+
+
+@app.get("/v1/schedule/{parameters}")
+async def getCalendar(parameters: str, db: Session = Depends(get_db), availFrom: str = None,
+                      availTo: str = None, Authorize: AuthJWT = Depends()):
+    Authorize.jwt_required()
+    if parameters == "calendar" and availFrom is not None and availTo is not None:
+        from models.scheduling.srmOperation import get_to_calendar
+        movies = get_to_calendar(db=db, availFrom=availFrom, availTo=availTo)
+        return {"status": 200, "calendar_details": movies}
+    else:
+        return {"status": 400, "calendar_details": "Wrong Search Parameters"}
+
+
+@app.get("/v1/movies/{parameters}")
+async def getMovie(parameters: str, db: Session = Depends(get_db), name: Optional[str] = None,
+                   availFrom: Optional[str] = None,
+                   availTo: Optional[str] = None, genre: Optional[list[str]] = Query(None),
+                   ratingFrom: Optional[str] = None, ratingTo: Optional[str] = None,
+                   durationFrom: Optional[str] = None, durationTo: Optional[str] = None, skip: int = 0,
+                   limit: Optional[int] = None, Authorize: AuthJWT = Depends()):
+    Authorize.jwt_required()
+    from models.movies.moviesOperation import get_movies
+    if parameters == "find":
+        movies = get_movies(db=db, name=name, availFrom=availFrom, availTo=availTo, genre=genre, ratingTo=ratingTo,
+                            ratingFrom=ratingFrom, durationFrom=durationFrom, durationTo=durationTo, skip=skip,
+                            limit=limit)
+        return {"status": 200, "details": {"movieCount": len(movies), "details": movies}}
+    else:
+        return {"status": 400, "details": "Wrong Search Parameters"}
