@@ -1,5 +1,5 @@
 import json
-from typing import Optional, List
+from typing import Optional
 
 from fastapi import Depends, FastAPI, Request, Response, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,11 +14,10 @@ from base.db import SessionLocal
 from models.movies import moviesSchema
 from models.rooms import roomsSchema
 from models.scheduling import schedulingSchema
-from models.token import redis_conn
-from models.user import userSchema, userOperation
-from models.user.userOperation import checkUserType, get_user_by_email
+from models.user import userSchema
 from models.user.userSchema import UserLogin
-
+from fastapi.security import OAuth2PasswordBearer
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="Authorize")
 app = FastAPI(title=settings.PROJECT_NAME, version=settings.PROJECT_VERSION)
 origins = [
     "*",
@@ -69,6 +68,7 @@ def get_db():
 
 @app.post("/v1/user/register/")
 def create_user(user: userSchema.UserCreate, db: Session = Depends(get_db)):
+    from models.user import userOperation
     db_user = userOperation.check_if_user_exists(db, email=user.email, username=user.username)
     if db_user:
         return {"status": 4004, "user_info": {}}
@@ -81,6 +81,7 @@ def create_user(user: userSchema.UserCreate, db: Session = Depends(get_db)):
 # later in endpoint protected
 @app.post('/v1/user/login')
 def login(user: UserLogin, db: Session = Depends(get_db), Authorize: AuthJWT = Depends()):
+    from models.user import userOperation
     db_user = userOperation.get_user_by_email(db, email=user.email)
     db_user_id = userOperation.get_user_by_user_id(db, user_id=user.id)
 
@@ -150,7 +151,7 @@ def access_revoke(Authorize: AuthJWT = Depends()):
     Authorize.jwt_required()
 
     jti = Authorize.get_raw_jwt()['jti']
-    redis_conn.setex(jti, tokenSettings.access_expires, 'true')
+    models.redis_conn.setex(jti, tokenSettings.access_expires, 'true')
     return {"status": 200, "message": "Access token has been revoke, logged out"}
 
 
@@ -160,7 +161,7 @@ def refresh_revoke(Authorize: AuthJWT = Depends()):
     Authorize.jwt_refresh_token_required()
 
     jti = Authorize.get_raw_jwt()['jti']
-    redis_conn.setex(jti, tokenSettings.refresh_expires, 'true')
+    models.redis_conn.setex(jti, tokenSettings.refresh_expires, 'true')
     return {"status": 200, "detail": "Refresh token has been revoke"}
 
 
@@ -187,6 +188,9 @@ def protected_fresh(Authorize: AuthJWT = Depends()):
 @app.post('/v1/user/userType')
 def protected(user: userSchema.User, Authorize: AuthJWT = Depends(), db: Session = Depends(get_db)):
     Authorize.jwt_required()
+    from models.user.userOperation import get_user_by_email
+    from models.user.userOperation import checkUserType
+
     user = get_user_by_email(db, user.email)
     userType = checkUserType(db, user.id)
 

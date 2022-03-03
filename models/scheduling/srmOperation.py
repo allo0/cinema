@@ -55,6 +55,7 @@ def count_movies(db: Session, availFrom: Optional[str] = None, availTo: Optional
     from models.scheduling import schedulingModel
 
     movies = db.query(schedulingModel.Scheduling.movie_id).distinct()
+    movies = movies.filter(schedulingModel.Scheduling.active == 1)
 
     if availFrom is not None and availTo is not None:
         from sqlalchemy import and_
@@ -131,14 +132,14 @@ def get_to_calendar(db: Session, availFrom: Optional[str] = None, availTo: Optio
     movie_to_calendar = []
     # Loop for each unique movie entry in the schedule timeframe we want
     for movie in range(0, len(count_movies(db=db, availFrom=availFrom, availTo=availTo))):
-        print(moviesID[movie].movie_id)
 
         # -------------- Movies
         from models.movies.moviesOperation import get_movie
         movies.append(get_movie(db=db, id=moviesID[movie].movie_id))
 
         # -------------- Rooms
-        schedule_rooms = get_rooms_in_dates(db=db, movie_id=moviesID[movie].movie_id, availFrom=availFrom,availTo=availTo)
+        schedule_rooms = get_rooms_in_dates(db=db, movie_id=moviesID[movie].movie_id, availFrom=availFrom,
+                                            availTo=availTo)
         from models.rooms.roomsOperation import get_room
         for room_ in schedule_rooms:
             rooms.append(get_room(db=db, id=room_.room_id))
@@ -193,7 +194,7 @@ def add_to_schedule(db: Session, movie: str, details: list):
     for det in details:
         room_id = roomsOperation.get_room(db=db, name=det.room)
         room_movie_time.append(schedulingModel.Scheduling(movie_id=movie.id, room_id=room_id.id, viewingDate=det.date,
-                                                          viewingTime=det.time))
+                                                          viewingTime=det.time, active=1))
     db.add_all(room_movie_time)
     db.commit()
 

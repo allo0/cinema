@@ -18,6 +18,7 @@ class Movies(Base):
     genre = Column(String)
     availFrom = Column(DATE)
     availTo = Column(DATE)
+    active = Column(Integer)
 
     # room_movie_scheduler = relationship("Scheduling", back_populates="movie_scheduler")
 

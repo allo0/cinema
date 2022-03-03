@@ -11,6 +11,7 @@ class Details(BaseModel):
     time: str
 
 
+
 class SchedulingCreate(BaseModel):
     movie: str
     details: List[Details]
@@ -40,6 +41,7 @@ class Movie(BaseModel):
     photoURL: str
     rooms: List[Room]
     times: List[Time]
+
 
 
 class CalendarDetails(BaseModel):

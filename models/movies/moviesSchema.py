@@ -16,6 +16,7 @@ class MovieCreate(MoviesBase):
     genre: Optional[str] = None
     availFrom: Optional[date] = None
     availTo: Optional[date] = None
+    active: Optional[int] = None
 
 
 class Movies(MoviesBase):
