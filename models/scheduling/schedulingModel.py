@@ -13,4 +13,5 @@ class Scheduling(Base):
     viewingTime = Column(TIME)
     active = Column(Integer)
 
+
     pass

@@ -199,3 +199,4 @@ def add_to_schedule(db: Session, movie: str, details: list):
     db.commit()
 
     return True
+

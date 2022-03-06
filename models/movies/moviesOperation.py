@@ -33,6 +33,7 @@ def expire_movies(db: Session):
             continue
 
 
+
 def get_movie(db: Session, name: Optional[str] = None, id: Optional[str] = None):
     from models.movies import moviesModel
     movies = db.query(moviesModel.Movies)

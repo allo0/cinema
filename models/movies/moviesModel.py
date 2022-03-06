@@ -20,6 +20,7 @@ class Movies(Base):
     availTo = Column(DATE)
     active = Column(Integer)
 
+
     # room_movie_scheduler = relationship("Scheduling", back_populates="movie_scheduler")
 
     pass

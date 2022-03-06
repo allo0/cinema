@@ -19,6 +19,7 @@ class MovieCreate(MoviesBase):
     active: Optional[int] = None
 
 
+
 class Movies(MoviesBase):
     id: Optional[int] = None
 
