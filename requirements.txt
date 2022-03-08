@@ -1,16 +1,16 @@
-fastapi==0.70.1
-mysql_connector_repackaged==0.3.1
-pydantic==1.9.0
-uvicorn==0.16.0
-aiofiles==0.6.0
-python-multipart==0.0.5
-
-
-SQLAlchemy~=1.4.29
-DateTime~=4.3
-mysql~=0.0.3
-mysql-connector-python~=8.0.27
-passlib~=1.7.4
+fastapi==0.75.0
+fastapi_crudrouter==0.8.5
+fastapi_utils==0.2.1
 python-jose ~=3.3.0
-redis~=4.1.0
-fastapi-jwt-auth ~=0.5.0
+passlib==1.7.4
+pydantic==1.9.0
+python_jose==3.3.0
+SQLAlchemy==1.4.32
+starlette==0.17.1
+uvicorn==0.17.5
+aiofiles==0.8.0
+mysql-connector-python~=8.0.27
+mysql_connector_repackaged==0.3.1
+mysql~=0.0.3
+
+python-multipart==0.0.5

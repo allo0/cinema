@@ -1,24 +1,18 @@
-import json
-from typing import Optional
-
-from fastapi import Depends, FastAPI, Request, Response, Query
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from fastapi_jwt_auth import AuthJWT
-from fastapi_jwt_auth.exceptions import AuthJWTException
+from fastapi import FastAPI, Depends, Request, Response
+from fastapi_utils.tasks import repeat_every
 from sqlalchemy.orm import Session
+from starlette.middleware.cors import CORSMiddleware
 
-import models.token
 from base.config import settings
 from base.db import SessionLocal
-from models.movies import moviesSchema
-from models.rooms import roomsSchema
-from models.scheduling import schedulingSchema
-from models.user import userSchema
-from models.user.userSchema import UserLogin
-from fastapi.security import OAuth2PasswordBearer
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="Authorize")
-app = FastAPI(title=settings.PROJECT_NAME, version=settings.PROJECT_VERSION)
+from models.auth.token import get_current_active_user
+from models.movies.movie_router import movieRouter
+from models.open.open_router import openRouter
+from models.rooms.room_router import roomRouter
+from models.schedule.schdule_router import scheduleRouter
+from models.users.user_router import userRouter
+
+app = FastAPI(title=settings.PROJECT_NAME, version=settings.PROJECT_VERSION, root_path="http://127.0.0.1:5000")
 origins = [
     "*",
     "https://cinema-front-end.herokuapp.com/",
@@ -26,6 +20,7 @@ origins = [
     "http://127.0.0.1:5000",
     "http://localhost:4200",
 ]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -33,7 +28,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-tokenSettings = models.token.Settings()
 
 
 @app.middleware("http")
@@ -47,210 +41,39 @@ async def db_session_middleware(request: Request, call_next):
     return response
 
 
-# exception handler for authjwt
-# in production, you can tweak performance using orjson response
-@app.exception_handler(AuthJWTException)
-def authjwt_exception_handler(request: Request, exc: AuthJWTException):
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"detail": exc.message}
-    )
+@app.on_event("startup")
+@repeat_every(seconds=60 * 60 * 24)  # 24 hours
+async def expire_movies(db: Session):
+    from models.movies import movie_model
+    movies = db.query(movie_model.Movies)
+    movies = movies.filter(movie_model.Movies.active == 1)
+    movies = movies.all()
+
+    from datetime import datetime
+    from models.schedule import schedule_model
+
+    from models.schedule.schedule_controller import get_room_movie_time
+    for movie in movies:
+        if str(movie.availTo) < datetime.today().strftime('%Y-%m-%d'):
+            moviex = db.query(movie_model.Movies)
+            moviex = moviex.filter(movie_model.Movies.id == movie.id)
+            moviex = moviex.filter(movie_model.Movies.active == 1)
+            moviex = moviex.update({movie_model.Movies.active: 0})
+            db.commit()
+            for i in range(0, len(get_room_movie_time(db, movie.id))):
+                sch = db.query(schedule_model.Scheduling) \
+                    .filter(schedule_model.Scheduling.movie_id == movie.id) \
+                    .update({schedule_model.Scheduling.active: 0})
+                db.commit()
+
+        else:
+            continue
 
 
-# Connect with the database
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+app.include_router(movieRouter, dependencies=[Depends(get_current_active_user)], prefix='/v1')
+app.include_router(roomRouter, dependencies=[Depends(get_current_active_user)], prefix='/v1')
+app.include_router(scheduleRouter, dependencies=[Depends(get_current_active_user)], prefix='/v1')
+app.include_router(userRouter, dependencies=[Depends(get_current_active_user)], prefix='/v1')
+app.include_router(openRouter, prefix='/v1')
 
-
-@app.post("/v1/user/register/")
-def create_user(user: userSchema.UserCreate, db: Session = Depends(get_db)):
-    from models.user import userOperation
-    db_user = userOperation.check_if_user_exists(db, email=user.email, username=user.username)
-    if db_user:
-        return {"status": 4004, "user_info": {}}
-
-    return {"status": 200, "user_info": userOperation.create_user(db=db, user_=user)}
-
-
-# provide a method to create access tokens. The create_access_token()
-# function is used to actually generate the token to use authorization
-# later in endpoint protected
-@app.post('/v1/user/login')
-def login(user: UserLogin, db: Session = Depends(get_db), Authorize: AuthJWT = Depends()):
-    from models.user import userOperation
-    db_user = userOperation.get_user_by_email(db, email=user.email)
-    db_user_id = userOperation.get_user_by_user_id(db, user_id=user.id)
-
-    if (db_user is None and db_user_id is None) and user.id:
-        userOperation.create_user(db=db, user_=user)
-        user = userOperation.authenticate_user(db, email=user.email, username=user.username, user_id=user.id)
-        if not user:
-            return {"status": 4001, "message": "Wrong username,email or password"}
-    elif db_user and db_user_id and db_user.user_id is not None:
-
-        user = userOperation.authenticate_user(db, email=user.email, username=user.username, user_id=user.id)
-        if not user:
-            return {"status": 4002, "message": "Wrong username,email or password"}
-
-    elif db_user and user.email and user.password:
-        user = userOperation.authenticate_user(db, email=user.email, username=user.username, password=user.password,
-                                               user_id=user.id)
-        if not user:
-            return {"status": 4003, "message": "Wrong username,email or password"}
-    else:
-        return {"status": 4000, "message": "Wrong username,email or password"}
-
-    """
-    create_access_token supports an optional 'fresh' argument,
-    which marks the token as fresh or non-fresh accordingly.
-    As we just verified their username and password, we are
-    going to mark the token as fresh here.
-    """
-
-    userType = userOperation.get_userType(db, user.id)
-
-    data = str(
-        {"email": user.email, "firstName": user.firstName, "lastName": user.lastName, "userType": userType.userType})
-
-    access_token = Authorize.create_access_token(
-        subject=data,
-        algorithm="HS256",
-        fresh=True)
-    refresh_token = Authorize.create_refresh_token(subject=data)
-    return {"status": 200, "access_type": "Bearer", "access_token": access_token, "refresh_token": refresh_token}
-
-
-@app.get('/v1/token/isvalid')
-def isvalid(Authorize: AuthJWT = Depends()):
-    Authorize.jwt_required()
-    return {"status": 200, "message": "Token is valid"}
-
-
-@app.post('/v1/token/refresh')
-def refresh(Authorize: AuthJWT = Depends()):
-    """
-    The jwt_refresh_token_required() function insures a valid refresh
-    token is present in the request before running any code below that function.
-    we can use the get_jwt_subject() function to get the subject of the refresh
-    token, and use the create_access_token() function again to make a new access token
-    """
-    Authorize.jwt_refresh_token_required()
-
-    current_user = Authorize.get_jwt_subject()
-    new_access_token = Authorize.create_access_token(subject=current_user)
-    return {"status": 200, "access_token": new_access_token}
-
-
-# Basically Logout function
-@app.delete('/v1/token/access-revoke')
-def access_revoke(Authorize: AuthJWT = Depends()):
-    Authorize.jwt_required()
-
-    jti = Authorize.get_raw_jwt()['jti']
-    models.redis_conn.setex(jti, tokenSettings.access_expires, 'true')
-    return {"status": 200, "message": "Access token has been revoke, logged out"}
-
-
-# Endpoint for revoking the current users refresh token
-@app.delete('/v1/token/refresh-revoke')
-def refresh_revoke(Authorize: AuthJWT = Depends()):
-    Authorize.jwt_refresh_token_required()
-
-    jti = Authorize.get_raw_jwt()['jti']
-    models.redis_conn.setex(jti, tokenSettings.refresh_expires, 'true')
-    return {"status": 200, "detail": "Refresh token has been revoke"}
-
-
-# Any valid JWT access token can access this endpoint
-@app.get('/v1/protected')
-def protected(Authorize: AuthJWT = Depends()):
-    Authorize.jwt_required()
-    current_user = Authorize.get_jwt_subject()
-    current_user = current_user.replace('\'', '"')
-    current_user = json.loads(current_user)
-
-    return {"status": 200, "details": current_user}
-
-
-# Only fresh JWT access token can access this endpoint
-@app.get('/v1/protected-fresh')
-def protected_fresh(Authorize: AuthJWT = Depends()):
-    Authorize.fresh_jwt_required()
-
-    current_user = Authorize.get_jwt_subject()
-    return {"status": 200, "user": current_user}
-
-
-@app.post('/v1/user/userType')
-def protected(user: userSchema.User, Authorize: AuthJWT = Depends(), db: Session = Depends(get_db)):
-    Authorize.jwt_required()
-    from models.user.userOperation import get_user_by_email
-    from models.user.userOperation import checkUserType
-
-    user = get_user_by_email(db, user.email)
-    userType = checkUserType(db, user.id)
-
-    return {"status": 4005, "details": userType}
-
-
-@app.post('/v1/movies/addMovie')
-def addMovie(movie: moviesSchema.MovieCreate, db: Session = Depends(get_db), Authorize: AuthJWT = Depends()):
-    Authorize.jwt_required()
-    from models.movies import moviesOperation
-
-    return {"status": 200, "movie_info": moviesOperation.add_movie(db=db, movie_=movie)}
-
-
-@app.post('/v1/rooms/addRoom')
-def addRoom(room: roomsSchema.Rooms, db: Session = Depends(get_db), Authorize: AuthJWT = Depends()):
-    Authorize.jwt_required()
-    from models.rooms import roomsOperation
-
-    return {"status": 200, "movie_info": roomsOperation.add_room(db=db, room_=room)}
-
-
-@app.post('/v1/schedule/addMovieToSchedule')
-def addMovieToSchedule(srm: schedulingSchema.SchedulingCreate, db: Session = Depends(get_db),
-                       Authorize: AuthJWT = Depends()):
-    Authorize.jwt_required()
-    from models.scheduling import srmOperation
-    trans_completed = srmOperation.add_to_schedule(db=db, movie=srm.movie, details=srm.details)
-    if not trans_completed:
-        return {"status": 400,
-                "scheduling_info": "Schedule was unsuccessful"}
-    return {"status": 200,
-            "scheduling_info": "Schedule updated successfully"}
-
-
-@app.get("/v1/schedule/{parameters}")
-async def getCalendar(parameters: str, db: Session = Depends(get_db), availFrom: str = None,
-                      availTo: str = None, Authorize: AuthJWT = Depends()):
-    Authorize.jwt_required()
-    if parameters == "calendar" and availFrom is not None and availTo is not None:
-        from models.scheduling.srmOperation import get_to_calendar
-        movies = get_to_calendar(db=db, availFrom=availFrom, availTo=availTo)
-        return {"status": 200, "calendar_details": movies}
-    else:
-        return {"status": 400, "calendar_details": "Wrong Search Parameters"}
-
-
-@app.get("/v1/movies/{parameters}")
-async def getMovie(parameters: str, db: Session = Depends(get_db), name: Optional[str] = None,
-                   availFrom: Optional[str] = None,
-                   availTo: Optional[str] = None, genre: Optional[list[str]] = Query(None),
-                   ratingFrom: Optional[str] = None, ratingTo: Optional[str] = None,
-                   durationFrom: Optional[str] = None, durationTo: Optional[str] = None, skip: int = 0,
-                   limit: Optional[int] = None, Authorize: AuthJWT = Depends()):
-    Authorize.jwt_required()
-    from models.movies.moviesOperation import get_movies
-    if parameters == "find":
-        movies = get_movies(db=db, name=name, availFrom=availFrom, availTo=availTo, genre=genre, ratingTo=ratingTo,
-                            ratingFrom=ratingFrom, durationFrom=durationFrom, durationTo=durationTo, skip=skip,
-                            limit=limit)
-        return {"status": 200, "details": {"movieCount": len(movies), "details": movies}}
-    else:
-        return {"status": 400, "details": "Wrong Search Parameters"}
+#####
