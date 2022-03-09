@@ -12,7 +12,7 @@ from models.rooms.room_router import roomRouter
 from models.schedule.schdule_router import scheduleRouter
 from models.users.user_router import userRouter
 
-app = FastAPI(title=settings.PROJECT_NAME, version=settings.PROJECT_VERSION, root_path="http://127.0.0.1:5000")
+app = FastAPI(title=settings.PROJECT_NAME, version=settings.PROJECT_VERSION)#, root_path="http://127.0.0.1:5000"
 origins = [
     "*",
     "https://cinema-front-end.herokuapp.com/",
