@@ -48,7 +48,7 @@ def create_user(db: Session, user_: user_model.UserCreate):
 
     db_user = user_model.UserModel(email=user_.email, user_id=user_.user_id, username=user_.username,
                                    firstName=user_.firstName, lastName=user_.lastName, photoUrl=user_.photoUrl,
-                                   password=hashed_password)
+                                   password=hashed_password,user_type=user_.user_type)
     db.add(db_user)
     db.commit()
 
