@@ -67,7 +67,9 @@ def get_password_hash(password):
 
 def authenticate_user(db: Session, email: str, password: Optional[str] = None,
                       user_id: Optional[str] = None):
+
     user = get_user(db, email=email)
+
 
     if not user and not user_id:
         return False
@@ -76,6 +78,8 @@ def authenticate_user(db: Session, email: str, password: Optional[str] = None,
         if not verify_password(password, user.password) and not user_id:
             return False
     if user_id:
+        if not user:
+            return False
         if user_id != user.user_id:
             return 418
 
