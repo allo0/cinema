@@ -1,4 +1,4 @@
-fastapi==0.75.0
+fastapi==0.73.0
 fastapi_crudrouter==0.8.5
 fastapi_utils==0.2.1
 python-jose~=3.3.0
