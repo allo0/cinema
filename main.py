@@ -26,17 +26,24 @@ origins = [
     "http://localhost:4200/",
 ]
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
-@app.middleware("http")
-async def db_session_middleware(request: Request, call_next):
-    response = Response("Internal server error", status_code=500)
-    try:
-        request.state.db = SessionLocal()
-        response = await call_next(request)
-    finally:
-        request.state.db.close()
-    return response
+# @app.middleware("http")
+# async def db_session_middleware(request: Request, call_next):
+#     response = Response("Internal server error", status_code=500)
+#     try:
+#         request.state.db = SessionLocal()
+#         response = await call_next(request)
+#     finally:
+#         request.state.db.close()
+#     return response
 
 
 @app.on_event("startup")
@@ -73,14 +80,5 @@ app.include_router(roomRouter, dependencies=[Depends(get_current_active_user)], 
 app.include_router(scheduleRouter, dependencies=[Depends(get_current_active_user)], prefix='/v1')
 app.include_router(userRouter, dependencies=[Depends(get_current_active_user)], prefix='/v1')
 app.include_router(openRouter, prefix='/v1')
-
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 #####
