@@ -14,7 +14,7 @@ class Scheduling(Base):
     room_id = Column(Integer)
     viewingDate = Column(DATE)
     viewingTime = Column(TIME)
-    active = Column(Integer)
+    active = Column(Integer,default=1)
 
     pass
 

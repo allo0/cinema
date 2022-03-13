@@ -150,10 +150,10 @@ def get_to_calendar(db: Session, availFrom: Optional[str] = None, availTo: Optio
             times.append(get_date(db=db, room_id=time.room_id))
         # return schedule_times
         # -------------- Room Schema
-        from models.rooms.room_model import Room
+        from models.rooms.room_model import Rooms
         room_to_calendar = []
         for room in rooms:
-            room_to_calendar.append(Room(room_id=room.id, name=room.name, capacity=room.capacity))
+            room_to_calendar.append(Rooms(id=room.id, name=room.name, capacity=room.capacity))
 
         # -------------- Time & Day Schema
         from models.schedule.schedule_model import Time

@@ -21,7 +21,7 @@ class Movies(Base):
     genre = Column(String(255))
     availFrom = Column(DATE, default=date.today())
     availTo = Column(DATE, default=date.today())
-    active = Column(Integer)
+    active = Column(Integer, default=1)
 
     pass
 
