@@ -56,6 +56,11 @@ async def login_for_access_token(db: Session = Depends(get_db), username: str = 
                             detail="Google account not registered, go get a teapot",
                             headers={"WWW-Authenticate": "Bearer"},
                             )
+    if user == 401:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Account not authenticated",
+                            headers={"WWW-Authenticate": "Bearer"},
+                            )
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="Could not validate credentials",
@@ -68,10 +73,9 @@ async def login_for_access_token(db: Session = Depends(get_db), username: str = 
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-
 @openRouter.get("/activation/{activation_code}", response_class=HTMLResponse)
 async def activate_account(request: Request, activation_code: str,
                            db: Session = Depends(get_db)):
-    user_controller.user_activation(db=db,activation_code=activation_code)
+    user_controller.user_activation(db=db, activation_code=activation_code)
     templates = Jinja2Templates(directory="templates")
     return templates.TemplateResponse("/pages/thankyou.html", {"request": request})
