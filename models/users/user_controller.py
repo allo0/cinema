@@ -3,6 +3,7 @@ from typing import Optional
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
+from models.open.open_controller import create_uiid
 from models.users import user_model
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -15,10 +16,10 @@ def get_user(db: Session, email: str):
         .first()
 
 
-def get_user_un(db: Session, email: str):
+def get_user_by_activation_code(db: Session, activation_code: str):
     return db.query(user_model.UserModel) \
         .filter(
-        user_model.UserModel.email == email) \
+        user_model.UserModel.activation_code == activation_code) \
         .first()
 
 
@@ -46,9 +47,17 @@ def create_user(db: Session, user_: user_model.UserCreate):
     if user_.password:
         hashed_password = get_password_hash(user_.password)
 
-    db_user = user_model.UserModel(email=user_.email, user_id=user_.user_id, username=user_.username,
-                                   firstName=user_.firstName, lastName=user_.lastName, photoUrl=user_.photoUrl,
-                                   password=hashed_password,user_type=user_.user_type)
+    if not user_.user_id:
+        db_user = user_model.UserModel(email=user_.email, user_id=user_.user_id, username=user_.username,
+                                       firstName=user_.firstName, lastName=user_.lastName, photoUrl=user_.photoUrl,
+                                       password=hashed_password, user_type=user_.user_type, is_verified=False,
+                                       activation_code=create_uiid())
+
+    else:
+        db_user = user_model.UserModel(email=user_.email, user_id=user_.user_id, username=user_.username,
+                                       firstName=user_.firstName, lastName=user_.lastName, photoUrl=user_.photoUrl,
+                                       password=hashed_password, user_type=user_.user_type, is_verified=True)
+
     db.add(db_user)
     db.commit()
 
@@ -67,20 +76,34 @@ def get_password_hash(password):
 
 def authenticate_user(db: Session, email: str, password: Optional[str] = None,
                       user_id: Optional[str] = None):
-
     user = get_user(db, email=email)
-
 
     if not user and not user_id:
         return False
 
-    if password:
-        if not verify_password(password, user.password) and not user_id:
-            return False
     if user_id:
         if not user:
             return False
         if user_id != user.user_id:
             return 418
 
+    if password and user.is_verified == 1:
+        if not verify_password(password, user.password) and not user_id:
+            return False
+    else:
+        return 401
+
+    return user
+
+
+def user_activation(db: Session, activation_code: str):
+    user = get_user_by_activation_code(db=db, activation_code=activation_code)
+    # db_user = user_model.UserUpdate(email=user.email, user_id=user.user_id, username=user.username,
+    #                                firstName=user.firstName, lastName=user.lastName, photoUrl=user.photoUrl,
+    #                                password=user.password, user_type=user.user_type, is_verified=True)
+    user.is_verified = True
+    db.add(user)
+    db.commit()
+
+    db.refresh(user)
     return user

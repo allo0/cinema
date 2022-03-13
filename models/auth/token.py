@@ -55,7 +55,7 @@ async def get_current_user(db: Session = Depends(get_db), token: str = Depends(o
         raise credentials_exception
 
 
-    user = models.users.user_controller.get_user_un(db, email=token_data.email)
+    user = models.users.user_controller.get_user(db, email=token_data.email)
     if user is None:
         raise credentials_exception
     return user

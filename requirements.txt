@@ -1,7 +1,7 @@
 fastapi==0.75.0
 fastapi_crudrouter==0.8.5
 fastapi_utils==0.2.1
-python-jose ~=3.3.0
+python-jose~=3.3.0
 passlib==1.7.4
 pydantic==1.9.0
 python_jose==3.3.0
@@ -12,5 +12,6 @@ aiofiles==0.8.0
 mysql-connector-python~=8.0.27
 mysql_connector_repackaged==0.3.1
 mysql~=0.0.3
-
+fastapi-mail==1.0.4
+shortuuid==1.0.8
 python-multipart==0.0.5

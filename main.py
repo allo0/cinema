@@ -12,10 +12,6 @@ from models.rooms.room_router import roomRouter
 from models.schedule.schdule_router import scheduleRouter
 from models.users.user_router import userRouter
 
-# , root_path="http://127.0.0.1:5000"
-# app.mount("/templates", StaticFiles(directory="templates"), name="templates")
-
-
 origins = [
     "https://cinema-front-end.herokuapp.com",
     "https://cinema-thingy-1124.herokuapp.com",
@@ -33,6 +29,8 @@ middleware = [
 ]
 app = FastAPI(title=settings.PROJECT_NAME, version=settings.PROJECT_VERSION, middleware=middleware)
 
+
+# app.mount("/templates", StaticFiles(directory="templates"), name="templates")
 
 # app.add_middleware(
 #     CORSMiddleware,

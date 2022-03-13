@@ -21,7 +21,9 @@ class UserModel(Base):
     is_verified = Column(Boolean, default=False)
     is_active = Column(Boolean, default=True)
     user_type = Column(Integer, default=0)
+    activation_code = Column(String(255))
     __table_args__ = (UniqueConstraint('email', 'user_id', 'username', name='uc_email_id_username'),)
+
     pass
 
 
@@ -34,6 +36,7 @@ class UserCreate(BaseModel):
     lastName: str
     photoUrl: Optional[str] = None
     user_type: Optional[int] = None
+    activation_code: Optional[str] = None
 
 
 class UserUpdate(BaseModel):
@@ -43,6 +46,7 @@ class UserUpdate(BaseModel):
     lastName: Optional[str] = None
     photoUrl: Optional[str] = None
     user_type: Optional[int] = None
+    is_verified: Optional[int] = None
 
 
 class User(UserCreate):
