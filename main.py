@@ -2,9 +2,8 @@ from fastapi import FastAPI, Depends, Request, Response
 from fastapi_utils.tasks import repeat_every
 from sqlalchemy.orm import Session
 from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware import Middleware
 
-from starlette.staticfiles import StaticFiles
-from starlette.templating import Jinja2Templates
 
 from base.config import settings
 from base.db import SessionLocal
@@ -15,24 +14,33 @@ from models.rooms.room_router import roomRouter
 from models.schedule.schdule_router import scheduleRouter
 from models.users.user_router import userRouter
 
-app = FastAPI(title=settings.PROJECT_NAME, version=settings.PROJECT_VERSION)  # , root_path="http://127.0.0.1:5000"
+ # , root_path="http://127.0.0.1:5000"
 # app.mount("/templates", StaticFiles(directory="templates"), name="templates")
 
 
 origins = [
-    "https://cinema-front-end.herokuapp.com/",
-    "https://cinema-thingy-1124.herokuapp.com/",
-    "http://127.0.0.1:5000/",
-    "http://localhost:4200/",
+    "https://cinema-front-end.herokuapp.com",
+    "https://cinema-thingy-1124.herokuapp.com",
+    "http://127.0.0.1:5000",
+    "http://localhost:4200",
 ]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+middleware = [
+    Middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=True,
+        allow_methods=['*'],
+        allow_headers=['*']
+    )
+]
+app = FastAPI(title=settings.PROJECT_NAME, version=settings.PROJECT_VERSION,middleware=middleware)
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=origins,
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
 
 
 # @app.middleware("http")
