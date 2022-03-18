@@ -1,6 +1,7 @@
 from datetime import timedelta
 from typing import Optional
 
+import segno
 from fastapi import Depends, APIRouter, HTTPException, Form, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -39,7 +40,10 @@ async def create_user(user: user_model.UserCreate, db: Session = Depends(get_db)
         receipient = [latest_user.email]
         body = {
             "first_name": latest_user.firstName,
-            "activation_code": latest_user.activation_code
+            "activation_code": "http://localhost:5000/v1/activation/" + latest_user.activation_code,
+            "qrcode": segno.make("http://localhost:5000/v1/activation/" + latest_user.activation_code)
+            # "activation_code": "https://cinema-thingy-1124.herokuapp.com/v1/activation/" + latest_user.activation_code,
+            # "qrcode": segno.make("https://cinema-thingy-1124.herokuapp.com/v1/activation/" + latest_user.activation_code)
         }
         await send_activation_mail(receipient, body)
     return {"status": 200, "user_info": user}

@@ -16,6 +16,7 @@ userRouter = SQLAlchemyCRUDRouter(
     prefix='user',
     delete_all_route=False,
     get_one_route=False,
+    create_route=False,
     tags=['Users']
 
 )
@@ -30,7 +31,7 @@ userRouter = SQLAlchemyCRUDRouter(
 #
 #     return {"status": 200, "user_info": user_controller.create_user(db=db, user_=user)}
 
-@userRouter.get("", response_model=User)
+@userRouter.get("/me", response_model=User)
 async def read_current_user(current_user: User = Depends(get_current_active_user)):
     return current_user
 
