@@ -101,9 +101,10 @@ def user_activation(db: Session, activation_code: str):
     # db_user = user_model.UserUpdate(email=user.email, user_id=user.user_id, username=user.username,
     #                                firstName=user.firstName, lastName=user.lastName, photoUrl=user.photoUrl,
     #                                password=user.password, user_type=user.user_type, is_verified=True)
-    user.is_verified = True
-    db.add(user)
-    db.commit()
+    if  not user.is_verified:
+        user.is_verified = True
+        db.add(user)
+        db.commit()
 
-    db.refresh(user)
+        db.refresh(user)
     return user

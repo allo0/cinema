@@ -16,3 +16,5 @@ mysql~=0.0.3
 fastapi-mail==1.0.4
 shortuuid==1.0.8
 python-multipart==0.0.5
+# sqlmodel==0.0.6
+python-barcode==0.13.1

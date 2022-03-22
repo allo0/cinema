@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ticket</title>
+    <link rel="stylesheet" href="./style.css">
+
+</head>
+<body>
+<div class="l-col-right ticket-wrap" aria-label="Ticket for the movie show">
+    <div class="ticket" aria-hidden="true">
+        <div class="ticket__header">
+            <div class="ticket__co">
+
+                <span class="ticket__co-name">CinemaThingy</span>
+                <span class="u-upper ticket__co-subname">Better than Village</span>
+            </div>
+        </div>
+        <div class="ticket__body">
+            <p class="ticket__route">{{movie_name}}</p>
+            <p class="ticket__description">{{description}}</p>
+            <div class="ticket__timing">
+                <p>
+                    <span class="u-upper ticket__small-label">Date</span>
+                    <span class="ticket__detail">{{Feb 27}}</span>
+                </p>
+                <p>
+                    <span class="u-upper ticket__small-label">Time</span>
+                    <span class="ticket__detail">{{10:30}}</span>
+                </p>
+                <p>
+                    <span class="u-upper ticket__small-label">Room</span>
+                    <span class="ticket__detail">{{04}}</span>
+                </p>
+                <p>
+                    <span class="u-upper ticket__small-label">Seat</span>
+                    <span class="ticket__detail">{{C46}}</span>
+                </p>
+            </div>
+
+            <div class="ticket__timing">
+                <p>
+                    <span class="u-upper ticket__small-label">Reservation No</span>
+                    <span class="ticket__detail">{{reservation_number}}</span>
+                </p>
+                <p>
+                    <span class="u-upper ticket__small-label">Customer Name</span>
+                    <span class="ticket__detail">{{customer_name}}</span>
+                </p>
+
+            </div>
+
+        </div>
+        <div>
+            <span class="u-upper ticket__small-label">Scan Me</span>
+            <img src="https://via.placeholder.com/150" alt="QR"/>
+        </div>
+        <br>
+        <div>
+            <span class="u-upper ticket__small-label">Or Me</span>
+            <img class="ticket__barcode" src="https://via.placeholder.com/350x80" alt="Barcode"/>
+
+        </div>
+        <span class="u-upper ticket__small-label">{{1/2}}</span>
+    </div>
+</div>
+
+</body>
+</html>
