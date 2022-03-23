@@ -46,7 +46,7 @@ class UserUpdate(BaseModel):
     lastName: Optional[str] = None
     photoUrl: Optional[str] = None
     user_type: Optional[int] = None
-    is_verified: Optional[int] = None
+
 
 
 class User(UserCreate):
