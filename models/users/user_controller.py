@@ -56,7 +56,8 @@ def create_user(db: Session, user_: user_model.UserCreate):
     else:
         db_user = user_model.UserModel(email=user_.email, user_id=user_.user_id, username=user_.username,
                                        firstName=user_.firstName, lastName=user_.lastName, photoUrl=user_.photoUrl,
-                                       password=hashed_password, user_type=user_.user_type, is_verified=True)
+                                        user_type=user_.user_type, is_verified=True,
+                                       activation_code=create_uiid())
 
     db.add(db_user)
     db.commit()
@@ -101,7 +102,7 @@ def user_activation(db: Session, activation_code: str):
     # db_user = user_model.UserUpdate(email=user.email, user_id=user.user_id, username=user.username,
     #                                firstName=user.firstName, lastName=user.lastName, photoUrl=user.photoUrl,
     #                                password=user.password, user_type=user.user_type, is_verified=True)
-    if  not user.is_verified:
+    if not user.is_verified:
         user.is_verified = True
         db.add(user)
         db.commit()
