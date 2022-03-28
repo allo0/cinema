@@ -56,7 +56,7 @@ def create_user(db: Session, user_: user_model.UserCreate):
     else:
         db_user = user_model.UserModel(email=user_.email, user_id=user_.user_id, username=user_.username,
                                        firstName=user_.firstName, lastName=user_.lastName, photoUrl=user_.photoUrl,
-                                        user_type=user_.user_type, is_verified=True,
+                                       user_type=user_.user_type, is_verified=True,
                                        activation_code=create_uiid())
 
     db.add(db_user)
@@ -91,8 +91,10 @@ def authenticate_user(db: Session, email: str, password: Optional[str] = None,
     if password and user.is_verified == 1:
         if not verify_password(password, user.password) and not user_id:
             return False
-    else:
+    elif password and user.is_verified == 0:
         return 401
+    else:
+        return False
 
     return user
 

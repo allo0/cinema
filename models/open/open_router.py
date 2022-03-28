@@ -1,9 +1,7 @@
 from datetime import timedelta
 from typing import Optional
+
 # import ImageWriter to generate an image file
-from barcode import EAN13
-from barcode.writer import ImageWriter
-import barcode
 import segno
 from fastapi import Depends, APIRouter, HTTPException, Form, Request
 from fastapi.responses import HTMLResponse
@@ -57,7 +55,7 @@ async def login_for_access_token(db: Session = Depends(get_db), username: str = 
                                  password: Optional[str] = Form(None),
                                  user_id: Optional[str] = Form(None)):
     # user = models.users.user_controller.authenticate_user(db, form_data.username, form_data.password, user_id)
-    user = models.users.user_controller.authenticate_user(db, username, password, user_id)
+    user = models.users.user_controller.authenticate_user(db=db, email=username, password=password, user_id=user_id)
     if user == 418:
         raise HTTPException(status_code=status.HTTP_418_IM_A_TEAPOT,
                             detail="Google account not registered, go get a teapot",
@@ -83,8 +81,10 @@ async def login_for_access_token(db: Session = Depends(get_db), username: str = 
 @openRouter.get("/activation/{activation_code}", response_class=HTMLResponse)
 async def activate_account(request: Request, activation_code: str,
                            db: Session = Depends(get_db)):
-    user_controller.user_activation(db=db, activation_code=activation_code)
+    from models.reservations.reservation_controller import create_reservation
+    create_reservation(db=db, email="ias.topalidis@gmail.cdfom", reservation_code="sdf788")
 
+    user_controller.user_activation(db=db, activation_code=activation_code)
 
     templates = Jinja2Templates(directory="templates")
     return templates.TemplateResponse("/pages/thankyou.html", {"request": request})
