@@ -93,8 +93,7 @@ def authenticate_user(db: Session, email: str, password: Optional[str] = None,
             return False
     elif password and user.is_verified == 0:
         return 401
-    else:
-        return False
+
 
     return user
 
