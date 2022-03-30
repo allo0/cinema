@@ -1,6 +1,6 @@
 from fastapi import Depends, HTTPException
 from fastapi_crudrouter import SQLAlchemyCRUDRouter
-from sqlmodel import Session
+from sqlalchemy.orm import Session
 from starlette import status
 
 from base.db import Base, engine, get_db
