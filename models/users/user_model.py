@@ -48,7 +48,6 @@ class UserUpdate(BaseModel):
     user_type: Optional[int] = None
 
 
-
 class User(UserCreate):
     id: int
 

@@ -1,6 +1,5 @@
 from fastapi import Depends
 from fastapi_crudrouter import SQLAlchemyCRUDRouter
-from sqlalchemy.orm import Session
 
 from base.db import Base, engine, get_db
 from main import get_current_active_user
@@ -34,6 +33,3 @@ userRouter = SQLAlchemyCRUDRouter(
 @userRouter.get("/me", response_model=User)
 async def read_current_user(current_user: User = Depends(get_current_active_user)):
     return current_user
-
-
-

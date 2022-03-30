@@ -30,8 +30,6 @@ middleware = [
 app = FastAPI(title=settings.PROJECT_NAME, version=settings.PROJECT_VERSION, middleware=middleware)
 
 
-# app.mount("/templates", StaticFiles(directory="templates"), name="templates")
-
 # app.add_middleware(
 #     CORSMiddleware,
 #     allow_origins=origins,

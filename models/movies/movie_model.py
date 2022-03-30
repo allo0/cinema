@@ -6,7 +6,8 @@ from sqlalchemy import Column, Integer, String, DATE
 
 from base.db import Base
 from models.rooms.room_model import Room
-from models.schedule.schedule_model import Time
+# from models.schedule.schedule_model import Details
+# from models.schedule.schedule_model import Time
 
 
 class Movies(Base):
@@ -57,7 +58,8 @@ class MovieSchedule(BaseModel):
     genre: str
     photoURL: str
     rooms: List[Room]
-    times: List[Time]
+    # times: List[Details]
+#        times: List[Time]
 
 
 class Movie(MovieCreate):
