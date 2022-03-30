@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException
+from fastapi import Depends, APIRouter, HTTPException, Form, Request
 from fastapi_crudrouter import SQLAlchemyCRUDRouter
 from sqlalchemy.orm import Session
 from starlette import status
@@ -67,11 +67,11 @@ def get_schedule_as_list(parameters: str, db: Session = Depends(get_db)):
 def update_to_schedule(schedule_id: int, srm: SchedulingCreate, db: Session = Depends(get_db)):
     from models.schedule.schedule_controller import update_schedule
 
-    status = update_schedule(db=db, schedule_id=schedule_id, movie=srm.movie, room=srm.details[0].room,
+    sch_status = update_schedule(db=db, schedule_id=schedule_id, movie=srm.movie, room=srm.details[0].room,
                              date=srm.details[0].date,
                              time=srm.details[0].time)
 
-    if status == 1:
+    if sch_status == 1:
         raise HTTPException(status_code=status.HTTP_200_OK,
                             detail="Updated schedule",
                             headers={"WWW-Authenticate": "Bearer"},
@@ -87,9 +87,9 @@ def update_to_schedule(schedule_id: int, srm: SchedulingCreate, db: Session = De
 def delete_from_schedule(schedule_id: int, db: Session = Depends(get_db)):
     from models.schedule.schedule_controller import delete_from_schedule
 
-    status = delete_from_schedule(db=db, schedule_id=schedule_id)
+    sch_status = delete_from_schedule(db=db, schedule_id=schedule_id)
 
-    if status == 1:
+    if sch_status == 1:
         raise HTTPException(status_code=status.HTTP_200_OK,
                             detail="Deleted from schedule",
                             headers={"WWW-Authenticate": "Bearer"},
