@@ -1,11 +1,11 @@
-from fastapi import Depends, APIRouter, HTTPException, Form, Request
+from fastapi import Depends, HTTPException
 from fastapi_crudrouter import SQLAlchemyCRUDRouter
 from sqlalchemy.orm import Session
 from starlette import status
 
 from base.db import Base, engine, get_db
 from models.schedule import schedule_controller
-from models.schedule.schedule_model import SchedulingCreate, Schedule, Scheduling
+from models.schedule.schedule_model import SchedulingCreate, Schedule, Scheduling, SchedulingUpdate
 
 Base.metadata.create_all(bind=engine)
 scheduleRouter = SQLAlchemyCRUDRouter(
@@ -47,6 +47,8 @@ def get_schedule(parameters: str, availFrom: str, availTo: str, db: Session = De
     if parameters == "calendar" and availFrom is not None and availTo is not None:
         from models.schedule.schedule_controller import get_from_schedule
         movies = get_from_schedule(db=db, availFrom=availFrom, availTo=availTo)
+        from models.schedule.schedule_controller import get_sch_list
+        # movies =get_sch_list(db=db, availFrom=availFrom, availTo=availTo)
         return {"status": 200, "calendar_details": movies}
     else:
         return {"status": 400, "calendar_details": "Wrong Search Parameters"}
@@ -64,12 +66,11 @@ def get_schedule_as_list(parameters: str, db: Session = Depends(get_db)):
 
 
 @scheduleRouter.put("/{schedule_id}")
-def update_to_schedule(schedule_id: int, srm: SchedulingCreate, db: Session = Depends(get_db)):
+def update_to_schedule(schedule_id: int, srm: SchedulingUpdate, db: Session = Depends(get_db)):
     from models.schedule.schedule_controller import update_schedule
 
     sch_status = update_schedule(db=db, schedule_id=schedule_id, movie=srm.movie, room=srm.details[0].room,
-                             date=srm.details[0].date,
-                             time=srm.details[0].time)
+                                 date=srm.details[0].date, time=srm.details[0].time, remSeats=srm.details[0].remSeats)
 
     if sch_status == 1:
         raise HTTPException(status_code=status.HTTP_200_OK,

@@ -3,24 +3,43 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 
-def get_sch_list(db: Session):
+def get_sch_list(db: Session, movie: Optional[str] = None, room: Optional[str] = None,
+                 availFrom: Optional[str] = None,
+                 availTo: Optional[str] = None):
     from models.schedule import schedule_model
-    list = db.query(schedule_model.Scheduling)
-    list = list.filter(schedule_model.Scheduling.active == 1)
-    list = list.all()
+    dates = db.query(schedule_model.Scheduling)
+    dates = dates.filter(schedule_model.Scheduling.active == 1)
 
-    return list
+    if availFrom is not None and availTo is not None:
+        from sqlalchemy import and_
+        dates = dates.filter(and_(
+            schedule_model.Scheduling.date >= availFrom,
+            schedule_model.Scheduling.date <= availTo,
+        ))
+    elif availFrom is not None:
+        dates = dates.filter(schedule_model.Scheduling.date >= availFrom)
+    elif availTo is not None:
+        dates = dates.filter(schedule_model.Scheduling.date <= availTo)
+    if movie is not None:
+        dates = dates.filter(schedule_model.Scheduling.movie == movie)
+    if room is not None:
+        dates = dates.filter(schedule_model.Scheduling.room == room)
+    dates = dates.all()
+
+    return dates
 
 
 def update_schedule(db: Session, schedule_id: int, movie: Optional[str] = None, room: Optional[str] = None,
-                    date: Optional[str] = None, time: Optional[str] = None):
+                    date: Optional[str] = None, time: Optional[str] = None, remSeats: Optional[str] = None):
     from models.schedule import schedule_model
 
     upd = db.query(schedule_model.Scheduling) \
         .filter(schedule_model.Scheduling.id == schedule_id) \
         .update({schedule_model.Scheduling.movie: movie, schedule_model.Scheduling.room: room,
-                 schedule_model.Scheduling.date: date, schedule_model.Scheduling.time: time})
+                 schedule_model.Scheduling.date: date, schedule_model.Scheduling.time: time,
+                 schedule_model.Scheduling.remSeats: remSeats})
     return upd
+
 
 def delete_from_schedule(db: Session, schedule_id: int):
     from models.schedule import schedule_model
@@ -29,21 +48,6 @@ def delete_from_schedule(db: Session, schedule_id: int):
         .filter(schedule_model.Scheduling.id == schedule_id).delete()
     db.commit()
     return upd
-    # upd = db.query(schedule_model.Scheduling)
-    # upd = upd.filter(schedule_model.Scheduling.id == schedule_id)
-    # if movie is not None:
-    #     upd = upd.update({schedule_model.Scheduling.movie: movie})
-    # if room is not None:
-    #     upd = upd.update({schedule_model.Scheduling.room: room})
-    # if date is not None:
-    #     upd = upd.update({schedule_model.Scheduling.date: date})
-    # if time is not None:
-    #     upd = upd.update({schedule_model.Scheduling.time: time})
-    #
-    # db.execute(upd)
-    # db.refresh()
-    #
-    # return upd
 
 
 def get_date(db: Session, room: Optional[str] = None, movie: Optional[str] = None):
@@ -170,10 +174,11 @@ def get_from_schedule(db: Session, availFrom: Optional[str] = None, availTo: Opt
             room_to_calendar.append(Rooms(id=room.id, name=room.name, capacity=room.capacity))
 
         # -------------- Time & Day Schema
-        from models.schedule.schedule_model import ScheduleCreateUpdate
+        from models.schedule.schedule_model import ScheduleCreate
         time_to_calendar = []
         for time in times:
-            time_to_calendar.append(ScheduleCreateUpdate(room=time.room, time=str(time.time), date=str(time.date)))
+            time_to_calendar.append(
+                ScheduleCreate(room=time.room, time=str(time.time), date=str(time.date)))
 
         # -------------- Movie Schema
         from models.movies.movie_model import MovieSchedule
@@ -207,7 +212,8 @@ def add_to_schedule(db: Session, movie: str, details: list):
     room_movie_time = []
     for det in details:
         room_movie_time.append(schedule_model.Scheduling(movie=movie, room=det.room, date=det.date,
-                                                         time=det.time, active=1))
+                                                         time=det.time, maxSeats=det.maxSeats, remSeats=det.remSeats,
+                                                         active=1))
     db.add_all(room_movie_time)
     db.commit()
 
